@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>基于 Harness 与 TextGrad 的 Agent 自动化优化 · 侯奇瑞</title>
+  <meta name="description" content="分付规则解释助手的评测、归因、优化、回归与发布闭环。" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" crossorigin="anonymous" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (!window.renderMathInElement) return;
+      window.renderMathInElement(document.body, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false }
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+</head>
+<body>
+  <nav class="nav project-nav"><a href="index.html" class="logo">Qirui Hou.</a><ul><li><a href="index.html#experience">返回实习经历</a></li><li><a href="index.html#projects">全部项目</a></li></ul><button id="themeToggle" aria-label="切换主题">🌙</button></nav>
+  <main class="project-library single-project">
+    <article class="project-report">
+    <header class="report-header">
+      <p class="report-kicker">02 · 主要负责人 · 2026</p>
+      <h1>基于 Harness 与 TextGrad 的 Agent 自动化优化</h1>
+      <p class="report-summary">借鉴 TextGrad 的文本反向传播纪律，为 RAG Agent 补上 Prompt / KB 归因、中间态采集、回归门禁和人工审批，把人工试错改造成有证据、可追溯、可回滚的工程流程。</p>
+      
+      <dl class="report-metrics">
+        
+        <div>
+          <dt>简历阶段 0 分率</dt>
+          <dd>约 25% → 3%</dd>
+        </div>
+        
+        <div>
+          <dt>patch 溯源率</dt>
+          <dd>100%</dd>
+        </div>
+        
+        <div>
+          <dt>单轮迭代耗时</dt>
+          <dd>约 2h → 20min</dd>
+        </div>
+        
+      </dl>
+      
+    </header>
+<h2 id="situation">Situation｜RAG Agent 调优依赖人工经验，难以复现</h2>
+<p>分付规则解释助手需要引用正确业务规则，结合账单入参给出个性化解释，并控制口吻和篇幅。完整链路是“意图识别 → Query 改写 → KB 召回 → LLM 生成”。早期调优依靠人工跑题、翻 badcase、凭经验改 Prompt / KB，再全量回归。</p>
+<figure>
+  <img src="assets/agent-manual-tuning-pain-points.png" alt="人工调优中反复清零、修一坏一和震荡循环的四格示意图">
+  <figcaption>图 1 · 人工试错式调优的四类困境：全量回归成本、规则膨胀、局部退化和缺少版本归因。</figcaption>
+</figure>
+<p>这种方式最大的问题不是慢，而是无法回答“为什么改、改在哪里、由哪个 case 触发、回归后是否应该保留”。换人之后，很难从最终 Prompt 反推出历史决策。</p>
+
+<h2 id="task">Task｜把 Prompt 调参变成可追溯、可回滚的工程闭环</h2>
+<p>我负责把调优链路改造成“评测 → 归因 → 优化 → 验证 → 发布 / 回滚”的可重复流程，并沉淀为可复用 Skill。目标包括：构建真实问题 Harness、采集 Agent 中间态、区分 Prompt 与 KB 的错误归因、生成最小 patch，并用回归门禁决定接受或回滚。</p>
+<p>项目的关键约束是自动化不能越过业务安全边界。规则答疑如果错误修改 KB 或 Prompt，可能影响用户解释和客服口径，因此必须保留人工审批与可审计证据链。</p>
+
+<h2 id="action">Action｜借鉴 TextGrad，建立 Harness、归因树和人工闸门</h2>
+<p><strong>第一步是把循环里的 Loss 做可靠。</strong> 我用 261 道真实客服问题构建基线题库，通过 Adams API 并发答题，再由 Gemini 按 0 / 1 / 2 评分。除最终答案外，必须采集 <code>refined_query</code> 与 <code>knowledge_content</code>，否则无法区分检索错误和生成错误。</p>
+<figure>
+  <img src="assets/agent-harness-dataset.png" alt="261 道规则答疑基线题库的主题和知识库覆盖分布">
+  <figcaption>图 2 · 261 题基线 Harness 的覆盖结构，由项目原始 CSV 聚合生成。</figcaption>
+</figure>
+<p><strong>第二步是把 TextGrad 思路落到 RAG 场景。</strong> Prompt 和 KB 是文本变量，Adams 生成答案是 Forward，Gemini 评分是 Loss，Backward Engine 输出结构化自然语言梯度，Optimizer 结合历史 Momentum 生成最小 patch。</p>
+<table><thead><tr><th>计算图元素</th><th>PyTorch</th><th>项目落地</th></tr></thead><tbody><tr><td>变量</td><td>Tensor</td><td>Prompt / KB</td></tr><tr><td>Forward</td><td><code>model(x)</code></td><td>Adams 生成 answer</td></tr><tr><td>Loss</td><td>MSE / CE</td><td>Gemini 评分与 reason</td></tr><tr><td>Backward</td><td><code>loss.backward()</code></td><td>结构化文字梯度</td></tr><tr><td>Optimizer</td><td>SGD / Adam</td><td>gradient + Momentum → patch</td></tr></tbody></table>
+<p><strong>第三步是先归因，再修改。</strong> 每个 $score < 2$ 的 case 必须读取召回片段并经过归因树。Backward 只输出 <code>target / why / direction / evidence</code>，不能直接重写 Prompt；Optimizer 只有引用对应 <code>gradient_id</code> 才能生成 patch。</p>
+<table><thead><tr><th>归因类型</th><th style="text-align: right;">约占比</th><th>处理方式</th></tr></thead><tbody><tr><td><code>kb_retrieval</code></td><td style="text-align: right;">40%</td><td>补 chunk、标题或同义词</td></tr><tr><td><code>kb_content</code></td><td style="text-align: right;">30%</td><td>补充缺失的业务事实</td></tr><tr><td><code>prompt_method</code></td><td style="text-align: right;">15%</td><td>调整引用方法与回答流程</td></tr><tr><td><code>prompt_style</code></td><td style="text-align: right;">10%</td><td>调整结构和口吻约束</td></tr><tr><td><code>d_suspect</code></td><td style="text-align: right;">5%</td><td>标记 Judge 可疑，暂不修改线上变量</td></tr></tbody></table>
+<p><strong>第四步是用门禁控制风险。</strong> 每轮只选择 3–8 个同主题 case；validation 至少重复 3 次并取众数。只有加权净收益大于 0 且没有 2→0 退化才接受，否则回滚。意图节点、评分 Prompt、字段映射和基线资产进入冻结清单。</p>
+<figure>
+  <img src="assets/agent-end-to-end-optimization-loop.png" alt="Agent 自动化调优从编排、评测、归因到人工审批发布的六步闭环">
+  <figcaption>图 3 · 端到端优化闭环。第 5、6 步之间设置审归因、审改动、授权上传和接受 / 回滚四道人工闸门。</figcaption>
+</figure>
+
+<h2 id="result">Result｜0 分率下降，迭代从技巧变成工程资产</h2>
+<p>简历阶段口径下，四轮调优后 0 分率由约 <strong>25% 降至 3%</strong>；每条 patch 均绑定 gradient 与源 case，溯源率 <strong>100%</strong>；单轮迭代由人工约 <strong>2 小时</strong>缩短至约 <strong>20 分钟</strong>。</p>
+<p>更重要的是，题库、变量、中间态、梯度、patch 和回归结果能够串成证据链。产品或后续维护者可以复现修改原因，而不是从最终 Prompt 反推历史。四个踩坑也被固化为流程约束：中间态必采、Prompt / KB 边界、冻结清单和 N≥3 众数规则。</p>
+
+<h2 id="limits">Review｜口径边界与面试追问</h2>
+<ul>
+<li>“约 25%→3%”是简历阶段口径；精确实验路径曾记录约 <strong>17%→3.8%</strong>，两者来自不同阶段基线，不能混为同一次实验。</li>
+<li>自动化不等于无人审批。业务规则风险较高，因此保留四道人工闸门。</li>
+<li>Judge 本身存在噪声，<code>d_suspect</code> 样本不会直接触发线上变量修改。</li>
+<li>待补材料包括脱敏前后 case、每轮 score 分布、ACCEPT / ROLLBACK 时间线和最终测试报告。</li>
+</ul>
+    </article>
+  </main>
+  <footer><p>© 2026 侯奇瑞 · 项目报告依据项目文件夹内《01-完整版》与新增项目图整理</p></footer>
+  <script src="script.js"></script>
+</body>
+</html>

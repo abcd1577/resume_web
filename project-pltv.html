@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>信贷 pLTV 与支付长序列表征探索 · 侯奇瑞</title>
+  <meta name="description" content="PZ-Net 方法理解、两阶段 pLTV 实验和支付长序列信号注入的完整项目报告。" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" crossorigin="anonymous" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (!window.renderMathInElement) return;
+      window.renderMathInElement(document.body, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false }
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+</head>
+<body>
+  <nav class="nav project-nav"><a href="index.html" class="logo">Qirui Hou.</a><ul><li><a href="index.html#experience">返回实习经历</a></li><li><a href="index.html#projects">全部项目</a></li></ul><button id="themeToggle" aria-label="切换主题">🌙</button></nav>
+  <main class="project-library single-project">
+    <article class="project-report">
+    <header class="report-header">
+      <p class="report-kicker">05 · 参与 / 实验探索 · 2025–2026</p>
+      <h1>信贷用户生命周期价值 pLTV：PZ-Net 与支付长序列表征探索</h1>
+      <p class="report-summary">项目区分两条归属不同的主线：PZ-Net 是团队方法；个人完成支付长序列 logit / score 注入两阶段 LightGBM、业务分位评估与 OOT 漂移诊断。</p>
+      
+      <dl class="report-metrics">
+        
+        <div>
+          <dt>Validation AUC</dt>
+          <dd>0.8104 → 0.8170</dd>
+        </div>
+        
+        <div>
+          <dt>Top10% 响应捕获</dt>
+          <dd>39.85% → 41.16%</dd>
+        </div>
+        
+        <div>
+          <dt>OOT MAE</dt>
+          <dd>526.30 → 517.02</dd>
+        </div>
+        
+      </dl>
+      
+    </header>
+<h2 id="situation">Situation｜信贷价值预测不能只看响应概率</h2>
+<p>电商或游戏中，高频购买通常对应高价值；信贷价值来自利息收入减坏账损失，需要同时估计借款意愿、借款金额、违约概率和违约损失：</p>
+<p>$$
+\mathrm{pLTV}
+:=P_{\mathrm{loan}}\cdot
+\left(
+\mathbb{E}[V_{\mathrm{balance}}\mid \mathrm{loan}]\cdot r\cdot T
+-P(\mathrm{od}\mid \mathrm{loan})\cdot
+\mathbb{E}[V_{\mathrm{balance}}\mid \mathrm{od}]
+\right).
+$$</p>
+<p>响应目标希望找到更愿意借的人，风控目标则要排除危险用户，两者可能产生负迁移。金额同时具有大量零值和极端长尾，普通 MSE 难以稳定拟合。</p>
+<p>宽表主要记录截面统计，难以表达交易节奏、商户迁移和场景序列。支付侧长序列模型已经将变长行为压缩为高维 hidden state；其 logit 是末层线性投影得到的一维任务摘要。</p>
+
+<h2 id="task">Task｜验证支付长序列信号能否补充信贷 pLTV 排序</h2>
+<p>项目分为两条归属不同的主线：PZ-Net 是团队方法，我负责学习、复现理解和方法迁移；个人实际完成的是支付长序列 logit / score 注入两阶段 LightGBM、业务分位评估与 OOT 漂移诊断。</p>
+<p>具体任务是：在“贷前、未开通、历史有开通”客群上，先用轻量特征注入验证跨域序列行为是否有效，再明确它的收益边界和下一步是否值得做完整 embedding / FiLM 端到端方案。</p>
+
+<h2 id="action">Action｜用团队 PZ-Net 思路指导，两阶段 LightGBM 先验证增量</h2>
+<p><strong>方法理解层。</strong> 团队 PZ-Net 方法用 PLE / CGC 区分共享专家和任务独占专家。每个任务的 Gate 只混合共享专家与本任务专家，从结构上减少强风控梯度对响应塔的污染。金额塔使用 ZILN 预测对数正态参数 $\mu$ 和 $\sigma$，以处理零膨胀和正值长尾；Sigma Penalty 约束 $\sigma^2$，避免模型通过放大方差降低 NLL。</p>
+<figure>
+  <img src="assets/pltv-film-ple-architecture.png" alt="支付长序列表征通过 FiLM 调制宽表表征并接入 PLE 多塔 pLTV 网络的概念设计">
+  <figcaption>图 1 · FiLM + PLE / CGC 概念方案。该图用于说明研究方向，不是已完成端到端训练的证据。</figcaption>
+</figure>
+<p><strong>个人实验层。</strong> 我实际跑通的是两阶段流程：Stage 1 估计 $P(\mathrm{loan})$；Stage 2 在有值样本上用 Tweedie / L2 回归 $\mathbb{E}[\mathrm{amount}\mid\mathrm{loan}]$；两者相乘得到期望价值。流程包含负采样概率校准、HPO、Top10% / 20% 分位报告和 OOT 漂移诊断，并旁路比较 ZILN 三头。</p>
+<p><strong>信号注入层。</strong> 支付长序列 score 先与宽表拼接，再分别训练响应分类和有值回归。验证集与 OOT 分开报告，避免用验证集增益掩盖时间外推问题。另一条探索把宽表文本化后编码为 896 维 KaLM Embedding，观察到分类增益较弱、金额回归更受益。</p>
+<figure>
+  <img src="assets/pltv-logit-ab.png" alt="支付长序列 logit 注入两阶段 LightGBM 前后的 Validation AUC、Top10% 响应捕获和 OOT MAE 对比">
+  <figcaption>图 2 · 实际执行的长序列信号 A/B。Validation AUC 为 0.8104→0.8170，Top10% 响应捕获为 39.85%→41.16%，OOT MAE 为 526.30→517.02。</figcaption>
+</figure>
+
+<h2 id="result">Result｜序列信号有增量，但受时间漂移和金额长尾约束</h2>
+<p>个人实验显示，Validation AUC 从 <strong>0.8104 提升到 0.8170</strong>，Top10% 累计响应占比从 <strong>39.85% 提升到 41.16%</strong>，OOT MAE 从 <strong>526.30 降至 517.02</strong>。验证集更高档方案的 AUC 位于约 0.8149–0.8170，KS、MAE 和 RMSE 同步改善；全量日均在贷相对误差可到约 −0.38% 量级。</p>
+<p>结果证明跨域序列行为信号可以补充截面宽表，但收益取决于预训练任务与信贷目标是否对齐。OOT 上模型层仍有小幅增益，但业务分布变化带来极端金额低估：客群支用率更高，并出现验证集没有的 9k 以上大额长尾；风险向表征使 Top10% 存在明显低估。</p>
+<p>KaLM 组合相对基线的叙事数字为全量误差下降 <strong>31.8%</strong>、支用误差下降 <strong>28.3%</strong>，但当前源目录缺少对应工作簿或图表，因此只作为待补证据项保留。</p>
+
+<h2 id="limits">Review｜署名边界与下一步</h2>
+<ul>
+<li>PZ-Net 是团队 KM 方法，个人定位为学习、复现理解和方法迁移，不暗示独立提出。</li>
+<li>个人完成的是长序列 <strong>logit / score 注入</strong>。完整 penultimate embedding 拼接与 FiLM 端到端训练仍是后续方案。</li>
+<li>概念架构图与实际 A/B 结果分开归因，不能把前者当作已完成训练的证据。</li>
+<li>“误差下降 31.8% / 28.3%”目前缺少对应图表，保留为待补证据，不与已展示的 logit A/B 混合。</li>
+<li>下一步可截取分类头前的多维 embedding，以 FiLM 或任务门控做更细适配，并在 OOT 上增加漂移校准和极端金额稳健损失。</li>
+<li>待补材料包括 KaLM 消融、logit 漂移、分层金额曲线、SHAP 和稳定性报告。</li>
+</ul>
+    </article>
+  </main>
+  <footer><p>© 2026 侯奇瑞 · 方法理解与个人实验结果分别归因</p></footer>
+  <script src="script.js"></script>
+</body>
+</html>

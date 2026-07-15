@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>贷中降额的离散与连续因果建模 · 侯奇瑞</title>
+  <meta name="description" content="从降额摆烂现象，到 Meta-Learner、DragonNet 与 VCNet 的完整因果决策项目报告。" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" crossorigin="anonymous" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (!window.renderMathInElement) return;
+      window.renderMathInElement(document.body, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false }
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+</head>
+<body>
+  <nav class="nav project-nav"><a href="index.html" class="logo">Qirui Hou.</a><ul><li><a href="index.html#experience">返回实习经历</a></li><li><a href="index.html#projects">全部项目</a></li></ul><button id="themeToggle" aria-label="切换主题">🌙</button></nav>
+  <main class="project-library single-project">
+    <article class="project-report">
+    <header class="report-header">
+      <p class="report-kicker">03 · 深度参与 · 2025–2026</p>
+      <h1>高额度使用率风险用户的降额策略：离散与连续 Treatment</h1>
+      <p class="report-summary">传统风险模型回答谁更容易逾期；本项目改为估计对谁降额能真正降低风险，以及应当降多少，把相关性排序推进为个体化干预决策。</p>
+      
+      <dl class="report-metrics">
+        
+        <div>
+          <dt>DragonNet 人均逾期金额</dt>
+          <dd>-13.35%</dd>
+        </div>
+        
+        <div>
+          <dt>整体金额违约率</dt>
+          <dd>-0.38%</dd>
+        </div>
+        
+        <div>
+          <dt>离散干预决策点</dt>
+          <dd>31 分位</dd>
+        </div>
+        
+      </dl>
+      
+    </header>
+<h2 id="situation">Situation｜高风险用户降额后，风险反而上升</h2>
+<p>策略冷启动阶段，高额度使用率风险用户被随机分为降额实验组和对照组。360 天后，实验组逾期金额占比反而比对照组高 <strong>3.64%</strong>。这说明“高风险”不等于“适合降额”：部分用户被降额后停止还款，出现“降额摆烂”。</p>
+<p>贷中评分卡能识别违约风险超过大盘十倍的人群，但它估计的是相关性，不是一次具体干预能带来的因果效果。业务真正关心的是：对谁降额会降低风险，以及应该降多少。</p>
+
+<h2 id="task">Task｜从风险排序转向个体化干预决策</h2>
+<p>项目将决策拆成两个 Treatment：离散 Treatment 判断“是否降额”，连续 Treatment 判断“降多少”。对用户 $i$，核心目标是估计条件平均处理效应：</p>
+<p>$$
+\tau(x)=\mathbb{E}\!\left[Y(1)-Y(0)\mid X=x\right].
+$$</p>
+<p>业务还要求把局部人群效果转换为整体收益。若管控前整体逾期金额占比为 $(a+b)/(A+B)$，管控后为 $(a+b-b')/(A+B-B')$，则整体指标改善需要：</p>
+<p>$$
+\frac{b'}{B'}>\frac{a+b}{A+B}.
+$$</p>
+<p>因此模型选择和阈值寻优不能只追求 AUUC，而要服务于这个整体收益条件。</p>
+
+<h2 id="action">Action｜用 Meta-Learner、DragonNet 和 VCNet 分别处理三类问题</h2>
+<p><strong>随机实验阶段。</strong> 在随机实验数据上使用 S / T / X-Learner，基础模型为 XGBoost。为了让二分类训练更接近金额业务目标，违约样本按归一化逾期金额加权，正常样本按归一化在贷金额加权；Bagging 用于降低单模型方差。</p>
+<p><strong>观测数据阶段。</strong> 现实中高风险用户更容易被降额，Treatment 和 outcome 同受混杂变量影响。DragonNet 以共享表征 $Z(X)$ 连接倾向性头 $\hat g(X)$、处理组 outcome 头 $\hat Q(1)$ 和对照组 outcome 头 $\hat Q(0)$。倾向性任务迫使共享层保留与 Treatment 选择有关的信息，再用于 CATE 估计。</p>
+<p><strong>连续干预阶段。</strong> 将降额幅度硬切成十档会破坏响应曲线连续性。VCNet 让网络参数成为干预强度 $t$ 的函数，以样条基函数表示：</p>
+<p>$$
+\mu_{\mathrm{NN}}(t,x)=f_{\theta(t)}(z),
+\qquad
+\theta(t)=A\Phi(t).
+$$</p>
+<p>模型由此估计同一用户在不同降额幅度下的反事实违约曲线。连续倾向性 $\pi(t\mid X)$ 在离散网格端点预测后线性插值，以处理 Treatment 分配偏差。</p>
+<p><strong>决策阈值。</strong> 离散干预阶段将 CATE 从低到高排序并分成 100 段，逐段累计计算 $b'/B'$。在收益条件和可管控人数之间取平衡，决策阈值落在约 <strong>31 分位点</strong>。</p>
+
+<h2 id="result">Result｜DragonNet 当前最优，VCNet 补足连续剂量能力</h2>
+<p>五种模型按同一业务口径比较如下：</p>
+<table><thead><tr><th>模型</th><th style="text-align: right;">在贷金额降幅</th><th style="text-align: right;">逾期金额降幅</th><th style="text-align: right;">整体逾期占比降幅</th></tr></thead><tbody><tr><td>S-Learner</td><td style="text-align: right;">2.21%</td><td style="text-align: right;">24.84%</td><td style="text-align: right;">0.33%</td></tr><tr><td>T-Learner</td><td style="text-align: right;">3.60%</td><td style="text-align: right;">9.85%</td><td style="text-align: right;">0.28%</td></tr><tr><td>X-Learner</td><td style="text-align: right;">1.22%</td><td style="text-align: right;">6.94%</td><td style="text-align: right;">0.17%</td></tr><tr><td>DragonNet</td><td style="text-align: right;">3.46%</td><td style="text-align: right;">13.35%</td><td style="text-align: right;">0.38%</td></tr><tr><td>VCNet</td><td style="text-align: right;">3.53%</td><td style="text-align: right;">12.00%</td><td style="text-align: right;">0.31%</td></tr></tbody></table>
+<p>DragonNet 在当前整体逾期占比指标上最好，使人均在贷金额下降 <strong>3.46%</strong>、人均逾期金额下降 <strong>13.35%</strong>、整体金额违约率下降 <strong>0.38%</strong>。VCNet 指标略低，但能回答连续降额幅度，是离散模型无法替代的能力。</p>
+<p>更重要的变化是决策目标：评分卡负责发现风险，因果模型负责判断干预是否有效。二者分工后，业务不再默认对所有高风险用户采用同一种管控动作。</p>
+
+<h2 id="limits">Review｜团队边界、识别假设与复现口径</h2>
+<ul>
+<li>该业务探索是团队项目，个人角色为深度参与；团队 KM 的方法与结果不表述为个人独立提出。</li>
+<li>AUUC 适用于 Binary Treatment，不能直接用于 VCNet 的连续干预评估。</li>
+<li>因果识别仍依赖可忽略性、重叠性和一致性等假设；观测数据结果需要倾向性平衡诊断。</li>
+<li>公开讲解可配合 IHDP-continuous 复现：DragonNet + $\epsilon$-head 的 PEHE 由 1.84 降至 1.34；VCNet 相对 DRNet 的 ADRF MSE 下降 21.3%。这些是公开复现，不是业务线上指标。</li>
+<li>待补证据包括 31 分位 $b'/B'$ 曲线、Qini / AUUC 图、DragonNet 三头架构、VCNet 剂量响应曲线和倾向性平衡诊断。</li>
+</ul>
+    </article>
+  </main>
+  <footer><p>© 2026 侯奇瑞 · 因果项目按团队贡献边界与公开复现口径呈现</p></footer>
+  <script src="script.js"></script>
+</body>
+</html>

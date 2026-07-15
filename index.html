@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>侯奇瑞 · 个人主页</title>
+  <meta name="description" content="侯奇瑞 - 北京理工大学应用统计硕士 · 求职方向：数据挖掘 / 机器学习" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" />
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <nav class="nav">
+    <a href="#home" class="logo">Qirui Hou.</a>
+    <ul>
+      <li><a href="#about">关于</a></li>
+      <li><a href="#experience">实习</a></li>
+      <li><a href="#research">论文 / 专利</a></li>
+      <li><a href="#projects">项目档案</a></li>
+      <li><a href="#contact">联系</a></li>
+    </ul>
+    <button id="themeToggle" aria-label="切换主题">🌙</button>
+  </nav>
+
+  <!-- Hero / 个人简介 -->
+  <section id="home" class="hero hero-split">
+    <div class="hero-left">
+      <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=QiruiHou" alt="头像" class="avatar" />
+      <div class="hero-socials">
+        <a href="mailto:houqirui@bit.edu.cn" title="Email" aria-label="Email">✉</a>
+        <a href="https://github.com/abcd1577/resume_web" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 .5C5.73.5.5 5.74.5 12.04c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.27-.01-1-.02-1.96-3.2.7-3.87-1.54-3.87-1.54-.52-1.34-1.27-1.69-1.27-1.69-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.18 1.76 1.18 1.02 1.76 2.69 1.25 3.34.96.1-.74.4-1.25.72-1.54-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.16 1.18a10.97 10.97 0 0 1 5.76 0c2.2-1.49 3.16-1.18 3.16-1.18.62 1.58.23 2.75.11 3.04.74.81 1.18 1.84 1.18 3.1 0 4.42-2.69 5.39-5.26 5.68.41.36.78 1.07.78 2.16 0 1.56-.01 2.81-.01 3.19 0 .31.21.68.8.56 4.56-1.52 7.85-5.83 7.85-10.91C23.5 5.74 18.27.5 12 .5z"/></svg>
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <h1><span class="highlight">侯奇瑞</span> <span class="name-en">Qirui Hou</span></h1>
+      <p class="tagline">硕士 · 2027 届应届 · 求职方向 <strong>数据挖掘</strong> / <strong>机器学习</strong></p>
+
+      <div class="hero-cards">
+        <div class="hc-row hc-edu">
+          <img src="北京理工大学logo.png" alt="北京理工大学" class="hc-logo" />
+          <div class="hc-text">
+            <div class="hc-line">
+              <span class="hc-title">北京理工大学</span>
+              <span class="hc-tier">985</span>
+              <span class="hc-date">2025 – 2027</span>
+            </div>
+            <div class="hc-sub">应用统计 · 专业硕士</div>
+          </div>
+        </div>
+
+        <div class="hc-row hc-edu">
+          <img src="西南交通大学校徽.png" alt="西南交通大学" class="hc-logo" />
+          <div class="hc-text">
+            <div class="hc-line">
+              <span class="hc-title">西南交通大学</span>
+              <span class="hc-tier hc-tier-211">211</span>
+              <span class="hc-date">2021 – 2025</span>
+            </div>
+            <div class="hc-sub">统计学 · 学士 · 四川省优秀毕业生</div>
+          </div>
+        </div>
+
+        <div class="hc-row hc-work">
+          <img src="微信支付logo.png" alt="微信支付" class="hc-logo" />
+          <div class="hc-text">
+            <div class="hc-line">
+              <span class="hc-title">腾讯 · 微信支付金融模型实验室</span>
+              <span class="hc-date">2025.07 – 至今</span>
+            </div>
+            <div class="hc-sub">数据科学实习生 · 风控方向</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <a href="#about" class="scroll-down" aria-label="向下滚动">
+      <span></span>
+    </a>
+  </section>
+
+  <!-- 关于我 -->
+  <section id="about" class="section">
+    <h2>关于我</h2>
+    <div class="about-grid">
+      <div>
+        <h3>教育背景</h3>
+        <ul class="timeline">
+          <li>
+            <span class="t-date">2025.09 – 2027.07</span>
+            <span class="t-school">北京理工大学 · 985</span>
+            <span class="t-major">应用统计 · 专业硕士</span>
+          </li>
+          <li>
+            <span class="t-date">2021.09 – 2025.06</span>
+            <span class="t-school">西南交通大学 · 211</span>
+            <span class="t-major">统计学 · 学士（四川省优秀毕业生）</span>
+          </li>
+        </ul>
+
+        <h3 style="margin-top:1.8rem">研究兴趣</h3>
+        <p>聚焦<strong>数据挖掘与机器学习</strong>方向，关注以下几条主线：</p>
+        <ul class="interest-list">
+          <li><strong>数据挖掘</strong>：从大规模行为数据中提炼可解释的业务标签与决策规则</li>
+          <li><strong>因果推断与 Uplift 建模</strong>：在观测数据上识别个体化干预效应，支撑精细化运营</li>
+          <li><strong>传统机器学习与 LLM Agent 融合</strong>：把树模型的稳定性和大模型的语义理解力结合起来</li>
+          <li><strong>长序列建模</strong>：时序 / 时空 / 行为序列的表征与预测</li>
+        </ul>
+
+        <h3 style="margin-top:1.8rem">荣誉 / 奖项</h3>
+        <div class="awards-grid">
+          <div class="award-col">
+            <h4>国家级 / 学科竞赛</h4>
+            <ul>
+              <li>第十五届全国大学生市场调查与分析大赛 <em>一等奖</em></li>
+              <li>第十七届中国大学生计算机设计大赛 <em>二等奖</em></li>
+              <li>第三届大湾区杯 AI for Science 科技竞赛 <em>二等奖</em></li>
+              <li>四川省大学生数学竞赛 <em>二等奖</em></li>
+            </ul>
+          </div>
+          <div class="award-col">
+            <h4>校级 / 综合荣誉</h4>
+            <ul>
+              <li>四川省省级 <em>优秀毕业生</em></li>
+              <li>北京理工大学 <em>一等奖学金</em></li>
+              <li>校级 <em>三好学生</em></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3>核心技能</h3>
+        <ul class="skills">
+          <li>Python</li>
+          <li>SQL · Spark</li>
+          <li>机器学习</li>
+          <li>因果推断</li>
+          <li>LLM Agent</li>
+        </ul>
+        <p style="margin-top:1rem; color:var(--text-soft); font-size:0.88rem; line-height:1.7;">
+          熟悉 XGBoost / TabPFN / Transformer / LSTM；掌握 DragonNet / VCNet / Meta-Learner 等 Uplift 模型；具备 RAG / Few-shot / CoT 多 Agent 工程化经验。
+        </p>
+
+        <h3 style="margin-top:1.8rem">联系方式</h3>
+        <p style="color:var(--text-soft); font-size:0.92rem; line-height:1.9;">
+          📧 qiruihou_7@163.com<br/>
+          📱 156-8049-2528
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 实习经历 -->
+  <section id="experience" class="section alt">
+    <h2>实习经历</h2>
+
+    <div class="experience-block">
+      <div class="exp-header">
+        <img class="exp-logo-img" src="微信支付logo.png" alt="微信支付" />
+        <div class="exp-meta">
+          <h3 class="exp-company">腾讯 · 微信事业群（WXG）· 微信支付金融模型实验室</h3>
+          <p class="exp-role">数据科学实习生 · 风控方向 · <span>2025.07 – 至今</span></p>
+          <p class="exp-summary">围绕分付 / 微粒贷等信贷业务，主导或深度参与 3 个核心项目，覆盖<strong>风控建模</strong>、<strong>LLM Agent 工程化</strong>、<strong>因果推断 Uplift 决策</strong>三大方向。</p>
+        </div>
+      </div>
+
+      <ol class="cards stacked">
+        <li class="card project-item">
+          <span class="proj-index">01</span>
+          <div class="card-body">
+            <h3>多智能体自动化标签挖掘系统（AgentFlow）</h3>
+            <p class="proj-role">主导建设 · 2026.01 – 至今</p>
+            <p>针对银行征信数据缺失，利用微信行为数据构建白名单用户婚姻状况预测模型。预研发现离婚群体违约风险突出，逾期 30+ Lift 高达 1.81。</p>
+            <p><strong>传统建模：</strong>设计两阶段级联建模方案，在 XGBoost 基础上探索 TabPFN 模型，OOT 样本 AUC 0.75 / KS 0.37；成功补齐 9957 万用户婚姻标签，模型评分 Top 3% 区域风险识别率达大盘 1.51 倍。</p>
+            <p><strong>Agent 探索：</strong>构建 AgentClassifyPipeline 通用框架，打通"特征提取 → SQL 生成 → 逻辑判定 → 报告生成"全流程闭环，代码已合入微信支付代码库。引入 RAG + Few-shot + CoT + MoE 并行专家矩阵，并通过 logprob 机制量化分类置信度。</p>
+            <p><strong>项目成果：</strong>捕获 XGBoost 漏召回的 10% 难识别样本；维持 60% 召回率前提下，查准率较 XGBoost 提升 20%（达 43%）。相关成果已发表腾讯内网 KM 技术好文，并申请发明专利《一种基于大语言模型的自动化标签挖掘方法及系统》。</p>
+            <div class="tags">
+              <span>Multi-Agent</span><span>LLM</span><span>RAG</span><span>XGBoost</span>
+              <span>TabPFN</span><span>风控建模</span><span>专利申请中</span>
+            </div>
+            <div class="links"><a href="project-label-mining.html">查看完整项目报告 →</a></div>
+          </div>
+        </li>
+
+        <li class="card project-item">
+          <span class="proj-index">02</span>
+          <div class="card-body">
+            <h3>Agent 自动化优化框架（分付规则解释助手）</h3>
+            <p class="proj-role">独立负责</p>
+            <p>针对分付规则答疑 Agent 迭代依赖人工试错、归因不可追溯、改 Prompt/KB 易引入震荡等痛点，引入 <strong>TextGrad 文本梯度</strong>范式，将"反向传播 + 梯度下降"迁移到 LLM 系统优化，自研"评测 + 自动归因 + 优化 + 回归"全流程闭环 Skill。</p>
+            <p><strong>框架设计：</strong>将 Agent 类比神经网络计算图——Prompt / KB 为文本变量，Adams 答题为 Forward，Gemini 评分为 Loss，CodeBuddy 切换"归因 / 优化"双角色实现 Backward + Optimizer。</p>
+            <p><strong>核心设计：</strong>四象限结构化归因（每条改动可溯源至源 case）；Backward / Optimizer 角色分离 + 宪法红线；Momentum 历史注入 + 单轮单主题聚焦；Human-in-the-loop 四道闸门兼顾自动化与业务安全。</p>
+            <p><strong>项目成果：</strong>261 道基线 case 经四轮调优，<strong>0 分率从 25% 降至 3%</strong>，溯源率 100%，单轮迭代耗时<strong>从 2 h 降至 20 min</strong>，已沉淀为可复用 Skill 工具。</p>
+            <div class="tags">
+              <span>TextGrad</span><span>LLM Agent</span><span>Harness 评测</span>
+              <span>Prompt 优化</span><span>自动化迭代</span>
+            </div>
+            <div class="links"><a href="project-agent-optimization.html">查看完整项目报告 →</a></div>
+          </div>
+        </li>
+
+        <li class="card project-item">
+          <span class="proj-index">03</span>
+          <div class="card-body">
+            <h3>基于因果推断的贷中降额策略与连续干预建模</h3>
+            <p class="proj-role">深度参与</p>
+            <p>针对降额管控后违约率不降反升 3.64% 的"降额摆烂"现象，进行因果效应建模，识别降额后的正向作用人群。</p>
+            <p><strong>离散干预建模：</strong>实验数据采用 Meta-Learner 框架 + Bagging 降低预估方差，逾期金额归一化重加权对齐业务目标；观测数据采用 <strong>DragonNet</strong>，倾向性预估实现特征蒸馏消除混杂变量；推导局部干预对整体收益判别式，根据 Qini 指数将决策点定在 31 分位点。</p>
+            <p><strong>连续干预探索：</strong>引入 <strong>VCNet</strong> 解决最优降额幅度决策难题，样条基函数将网络参数建模为干预强度 t 的动态函数，拟合个体化"剂量-响应曲线"。</p>
+            <p><strong>项目结果：</strong>DragonNet 方案使管控客群人均在贷金额下降 3.46%，人均逾期金额下降 13.35%，整体客群金额违约率下降 0.38%。</p>
+            <div class="tags">
+              <span>因果推断</span><span>DragonNet</span><span>VCNet</span>
+              <span>Uplift</span><span>Meta-Learner</span>
+            </div>
+            <div class="links"><a href="project-causal-treatment.html">查看完整项目报告 →</a></div>
+          </div>
+        </li>
+
+        <li class="card project-item">
+          <span class="proj-index">04</span>
+          <div class="card-body">
+            <h3>大模型驱动的发票用户标签体系构建与业务应用</h3>
+            <p class="proj-role">主要负责人 · 2026.04</p>
+            <p>针对 Agent 挖掘出的开放式发票标签无法直接进入业务圈选的问题，建设从<strong>自由标签生产</strong>到<strong>稳定业务标签体系</strong>的归纳与治理链路。</p>
+            <p><strong>问题诊断：</strong>AgentFlow 产出 2,338 种自由标签，其中约 76% 为单点长尾；标签命名、粒度和归属不统一，产品难以用其直接判断可运营人群。</p>
+            <p><strong>体系建设：</strong>按“分类 → 去重 → 合并 → 归纳 → 简化”处理开放标签，为每类沉淀 Summary 与 evidence；标签库作为圈选、效果评估和敏感标签治理的统一输入，并通过产品评审持续回流修正。</p>
+            <p><strong>项目成果：</strong>把一次性生成的标签结果转化为<strong>可入库、可圈选、可持续迭代</strong>的标签资产；AgentFlow 作为上游能力保留丰富语义和解释证据。</p>
+            <div class="tags">
+              <span>标签体系</span><span>标签治理</span><span>AgentFlow</span>
+              <span>Evidence</span><span>产品共创</span>
+            </div>
+            <div class="links"><a href="project-invoice-taxonomy.html">查看完整项目报告 →</a></div>
+          </div>
+        </li>
+
+        <li class="card project-item">
+          <span class="proj-index">05</span>
+          <div class="card-body">
+            <h3>信贷用户生命周期价值 pLTV 预测与支付长序列表征探索</h3>
+            <p class="proj-role">参与实验探索 · 贷前 / 未开通 / 历史有开通客群</p>
+            <p>围绕 pLTV 同时受<strong>用户响应</strong>和<strong>风险成本</strong>影响的双任务问题，探索宽表 Embedding、专家网络和支付行为长序列表征的组合方式。</p>
+            <p><strong>表征与基线：</strong>将宽表文本化后注入 KaLM 896 维 Embedding；实验发现其分类增益较弱、回归增益更明显，因此采用“原始特征做分类 + Embedding 做回归”的两阶段 LGBM 组合。</p>
+            <p><strong>模型探索：</strong>通过 PLE / CGC 区分共享与任务独占专家，缓解响应与风控负迁移；使用 ZILN 表达零膨胀价值分布，并尝试以 FiLM / score 将支付长序列表征注入任务塔。</p>
+            <p><strong>实验记录：</strong>相对基线，全量与支用误差分别下降 <strong>31.8%</strong>、<strong>28.3%</strong>；同时记录 OOT 漂移低估问题，作为后续稳定性优化方向。</p>
+            <div class="tags">
+              <span>pLTV</span><span>KaLM Embedding</span><span>PLE</span>
+              <span>ZILN</span><span>FiLM</span><span>长序列建模</span>
+            </div>
+            <div class="links"><a href="project-pltv.html">查看完整项目报告 →</a></div>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 论文 / 专利 / 技术好文 -->
+  <section id="research" class="section">
+    <h2>论文 · 专利 · 技术好文</h2>
+    <p style="color:var(--text-soft); margin-bottom:1.6rem;">学术研究、企业专利与内部技术分享一栏全览。</p>
+
+    <div class="research-grid">
+      <article class="research-card paper">
+        <div class="rc-tag">SCI 一区 · 在投</div>
+        <h3 class="rc-title">Spec-PINN：算子诱导流形嵌入的物理信息神经网络</h3>
+        <p class="rc-en">Physical Information Neural Network Based on Operator-Induced Manifold Embedding for Wave Propagation and Medium Inversion</p>
+        <p class="rc-meta">Engineering Applications of Artificial Intelligence (EAAI) · 2025 · <strong>第一作者</strong></p>
+        <p class="rc-desc">
+          针对物理信息神经网络（PINN）在求解高频 Helmholtz 方程时的两大顽疾——
+          <strong>谱偏差</strong>（高频振荡难拟合）与逆问题<strong>"周期跳跃"</strong>（非凸优化陷局部最优），
+          提出 <strong>Spec-PINN</strong> 框架，把解析物理性质内化进网络结构：
+        </p>
+        <ul class="rc-list">
+          <li>正问题：构造由<strong>基本解算子诱导</strong>的物理核嵌入层，从根源消除数值色散；</li>
+          <li>逆问题：设计<strong>渐近多尺度基双网络架构</strong>，将棘手的频率搜索转化为鲁棒的权重优化；</li>
+          <li>非均匀介质 benchmark 上，相比 FE-HRKAN 等 SOTA 方法在<strong>精度与收敛速度</strong>上均有显著提升。</li>
+        </ul>
+        <div class="rc-links">
+          <a href="Physical information neural network based on operator-induced manifold embedding for wave propagation and medium Inversion.pdf" target="_blank">查看论文 PDF →</a>
+        </div>
+      </article>
+
+      <article class="research-card patent">
+        <div class="rc-tag">发明专利 · 申请中</div>
+        <h3 class="rc-title">一种基于大语言模型的自动化标签挖掘方法及系统</h3>
+        <p class="rc-en">AgentFlow · LLM-based Automated Label Mining</p>
+        <p class="rc-meta">腾讯 · 微信支付 · <strong>第一发明人</strong></p>
+        <p class="rc-desc">
+          面向用户画像标签挖掘场景（如婚姻状况、商旅人士等），针对传统 XGBoost 类方案
+          <strong>人力成本高、解释性差</strong>的痛点，提出 AgentFlow 自动化挖掘系统，
+          覆盖意图识别 → 结构化数据语义化 → 多 Agent 推理 → 报告生成的完整工作流。
+        </p>
+        <ul class="rc-list">
+          <li>支持可视化拓扑结构的工作流编排，标签开发周期大幅压缩；</li>
+          <li>融合 RAG / CoT / ICL 多种范式，输出可追溯的推理链路；</li>
+          <li>已落地微信支付实际业务，并形成专利交底书《一种基于大语言模型的自动化标签挖掘方法及系统》。</li>
+        </ul>
+        <div class="rc-links">
+          <a href="一种基于大语言模型的自动化标签挖掘方法及系统.pdf" target="_blank">查看专利交底书 →</a>
+        </div>
+      </article>
+
+      <article class="research-card blog">
+        <div class="rc-tag">腾讯 KM · 技术好文</div>
+        <h3 class="rc-title">LLM 在表格数据预测中的最新进展调研</h3>
+        <p class="rc-en">From XGBoost to LLM Agents: A Survey on Tabular Prediction</p>
+        <p class="rc-meta">腾讯内网 KM · 技术好文 · <strong>独立撰写</strong></p>
+        <p class="rc-desc">
+          系统梳理 LLM 在表格数据预测领域的最新进展，将研究路径归纳为
+          <strong>通用基础模型 / 模型微调 / LLM × 传统 ML 协作 / 端到端优化</strong> 四个维度，
+          覆盖 TabPFN、TabLLM、InsightTab、FeatLLM、TABLET、AgenticSimLaw 等代表性工作。
+        </p>
+        <ul class="rc-list">
+          <li>对比传统 GBDT 与 LLM 范式的"数学安全感 vs 语义理解力"；</li>
+          <li>提炼出输入端语义化 + RAG、推理层 CoT + Agent、输出端 logprob 置信度三段式优化框架；</li>
+          <li>在内部小样本数据集上完成实战评估，TabPFN 与端到端 LLM 方案各有所长。</li>
+        </ul>
+        <div class="rc-links">
+          <a href="km.md" target="_blank">查看完整文章 →</a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- 项目档案：面试时可由简历摘要进入完整技术叙事 -->
+  <section id="projects" class="section alt">
+    <p class="eyebrow">SELECTED CASE STUDIES · 可验证的项目叙事</p>
+    <h2>项目档案</h2>
+    <p class="section-intro">每张卡片对应简历中的一个项目：先用 30 秒了解问题、职责与结果；需要追问时，再进入完整的技术档案查看方法、证据和复盘。</p>
+    <div class="case-grid">
+      <article class="case-card featured">
+        <p class="case-no">01 · 核心项目</p>
+        <h3>自动化标签挖掘：从征信缺失到可解释的百万级打标</h3>
+        <p class="case-summary">面向白名单用户征信缺失问题，构建 XGBoost / TabPFN 与 Multi-Agent 协同的标签挖掘链路，兼顾规模化、冷启动与可解释性。</p>
+        <div class="metric-row"><div><strong>9,957 万</strong><span>补齐标签用户</span></div><div><strong>AUC 0.75</strong><span>OOT 表现</span></div><div><strong>+20%</strong><span>难例查准率</span></div></div>
+        <div class="tags"><span>XGBoost</span><span>TabPFN</span><span>RAG</span><span>Multi-Agent</span></div>
+        <a class="case-link" href="project-label-mining.html">查看完整项目报告 <span>→</span></a>
+      </article>
+      <article class="case-card">
+        <p class="case-no">02 · Agent 工程化</p>
+        <h3>分付规则解释助手的自动化调优框架</h3>
+        <p class="case-summary">将 TextGrad 范式落到 Prompt / KB 双变量调优，建立 Harness 评测、归因决策树、回归与人工闸门闭环。</p>
+        <div class="metric-row"><div><strong>25% → 3%</strong><span>0 分率</span></div><div><strong>2h → 20min</strong><span>单轮耗时</span></div></div>
+        <div class="tags"><span>TextGrad</span><span>Harness</span><span>Human-in-the-loop</span></div>
+        <a class="case-link" href="project-agent-optimization.html">查看完整项目报告 <span>→</span></a>
+      </article>
+      <article class="case-card">
+        <p class="case-no">03 · 因果决策</p>
+        <h3>贷中降额：离散与连续 Treatment 的因果建模</h3>
+        <p class="case-summary">针对“降额不降险”现象，分别回答“是否降额”与“降多少”，以 Uplift 决策替代相关性策略。</p>
+        <div class="metric-row"><div><strong>-13.35%</strong><span>人均逾期金额</span></div><div><strong>-0.38%</strong><span>金额违约率</span></div></div>
+        <div class="tags"><span>DragonNet</span><span>VCNet</span><span>Qini</span></div>
+        <a class="case-link" href="project-causal-treatment.html">查看完整项目报告 <span>→</span></a>
+      </article>
+      <article class="case-card">
+        <p class="case-no">04 · 标签体系</p>
+        <h3>发票用户标签体系构建与业务应用</h3>
+        <p class="case-summary">将开放式标签分类、去重、合并与归纳为可入库、可圈选、可持续迭代的业务标签体系。</p>
+        <div class="metric-row"><div><strong>2,338 类</strong><span>自由标签输入</span></div><div><strong>76%</strong><span>单点长尾待治理</span></div></div>
+        <div class="tags"><span>标签治理</span><span>Evidence</span><span>产品共创</span></div>
+        <a class="case-link" href="project-invoice-taxonomy.html">查看完整项目报告 <span>→</span></a>
+      </article>
+      <article class="case-card">
+        <p class="case-no">05 · 长序列建模</p>
+        <h3>信贷 pLTV 预测与支付长序列表征探索</h3>
+        <p class="case-summary">在两阶段 LGBM 基线上探索 KaLM Embedding、PZ-Net 与 FiLM 注入，定位响应和风控任务之间的负迁移。</p>
+        <div class="metric-row"><div><strong>-31.8%</strong><span>全量相对误差</span></div><div><strong>-28.3%</strong><span>支用误差</span></div></div>
+        <div class="tags"><span>pLTV</span><span>PLE</span><span>ZILN</span><span>FiLM</span></div>
+        <a class="case-link" href="project-pltv.html">查看完整项目报告 <span>→</span></a>
+      </article>
+    </div>
+    <p class="evidence-note"><strong>材料说明：</strong>项目档案中的数据、公式、代码与图表均遵循脱敏原则；标注“待补证据”的位置会在收到 KM 截图、专利公开材料或实验图表后补全。</p>
+  </section>
+
+  <!-- 联系 -->
+  <section id="contact" class="section">
+    <h2>联系我</h2>
+    <p>欢迎合作、内推、技术交流，请通过以下方式找到我：</p>
+    <div class="contact-list">
+      <a href="mailto:qiruihou_7@163.com">📧 qiruihou_7@163.com</a>
+      <a href="tel:15680492528">📱 156-8049-2528</a>
+      <a href="https://github.com/abcd1577/resume_web" target="_blank" rel="noopener">💻 GitHub</a>
+      <a href="侯奇瑞-北京理工大学-27届-0511_副本.docx" download>📄 简历下载</a>
+    </div>
+  </section>
+
+  <footer>
+    <p>© 2026 侯奇瑞 Qirui Hou · 北京理工大学 · 应用统计</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
