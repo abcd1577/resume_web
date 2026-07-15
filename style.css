@@ -112,10 +112,10 @@ img { max-width: 100%; display: block; }
   justify-content: center;
   text-align: left;
   gap: clamp(2rem, 5vw, 5rem);
-  padding: clamp(4rem, 7vh, 6rem) clamp(2rem, 6vw, 5rem);
-  max-width: min(96vw, 1280px);
-  margin: 0 auto;
-  width: min(96vw, 1280px);
+  padding: clamp(4rem, 7vh, 6rem) clamp(2rem, 10vw, 12rem);
+  max-width: none;
+  margin: 0;
+  width: 100%;
   background:
     radial-gradient(ellipse at top left, rgba(207, 224, 242, 0.7), transparent 50%),
     radial-gradient(ellipse at bottom right, rgba(166, 192, 227, 0.5), transparent 55%),
@@ -150,7 +150,7 @@ img { max-width: 100%; display: block; }
 .hero-split .hero-right {
   flex: 1 1 auto;
   min-width: 0;          /* 关键：允许 flex 子项收缩 */
-  max-width: min(100%, 760px);
+  max-width: min(100%, 820px);
   display: flex; flex-direction: column;
 }
 .hero-split h1 { text-align: left; }
@@ -290,7 +290,7 @@ img { max-width: 100%; display: block; }
 @media (max-width: 1024px) {
   .hero.hero-split {
     gap: 2.5rem;
-    padding: 4rem 5%;
+    padding: 4rem 6%;
   }
   .hero-split .hero-left { width: 180px; }
   .hero-split .hero-left .avatar { width: 150px; height: 150px; }
