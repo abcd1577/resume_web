@@ -79,13 +79,27 @@ $$</p>
 <p>在公开集上，32-shot 下 LoRA 与 DoRA 接近，AdaLoRA 多数更弱；4-shot 时 LoRA 相对 XGBoost 更占优，样本增加后两者互有胜负。公平蒸馏要求在同一批 128 个样本上比较 gold-SFT 与 KD，KD 相对 SFT 的 AUC 差值分别为 heart +0.7、blood +14.7、diabetes −0.5、car +1.1。9B 教师 OOT AUC / KS 为 <strong>0.72 / 0.45</strong>，0.8B 学生为 <strong>0.71 / 0.41</strong>。</p>
 <p>相关工作沉淀为腾讯内网 KM 技术文章，并申请发明专利《一种基于大语言模型的自动化标签挖掘方法及系统》。对面试表达而言，这个项目的价值不是单一婚姻标签，而是一条可迁移到其他用户画像任务的标签开发链路。</p>
 
+<h2 id="evidence">Evidence｜成果佐证</h2>
+<div class="report-grid">
+  <section class="evidence-panel">
+    <h3>KM 技术好文</h3>
+    <p>项目方法论已沉淀为腾讯内网 KM 技术文章，用于记录表格 LLM、Agent 标签挖掘和蒸馏实验的技术复盘。</p>
+    <p><a href="km.md" target="_blank" rel="noopener">查看 KM 文章材料 →</a></p>
+  </section>
+  <section class="evidence-panel">
+    <h3>发明专利材料</h3>
+    <p>围绕自动化标签挖掘链路形成发明专利交底书，覆盖特征提取、SQL 生成、逻辑判断与报告生成闭环。</p>
+    <p><a href="一种基于大语言模型的自动化标签挖掘方法及系统.pdf" target="_blank" rel="noopener">查看专利交底书 →</a></p>
+  </section>
+</div>
+
 <h2 id="limits">Review｜边界、追问与待补证据</h2>
 <ul>
 <li>LLM / Agent 不适合全面替代 GBDT。大样本、高 QPS、以数值特征为主的任务仍优先使用树模型。</li>
 <li>Agent 的优势是解释、冷启动与难例补充；稳态批量任务更适合微调后的小模型。</li>
 <li>蒸馏上限受教师约束，硬标签 AUC 与概率排序 AUC 必须明确口径。</li>
 <li>公开集实验用于说明方法，不等同于业务数据结果；业务表细节继续按脱敏要求处理。</li>
-<li>待补证据包括脱敏总架构图、KM 截图、专利可公开页、Lift / 消融图，以及个人与协作者分工说明。</li>
+<li>KM 与专利材料已经作为成果佐证补充；后续可继续增加脱敏总架构图、Lift / 消融图，以及个人与协作者分工说明。</li>
 </ul>
     </article>
   </main>

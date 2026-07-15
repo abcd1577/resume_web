@@ -176,7 +176,7 @@
             <p>针对银行征信数据缺失，利用微信行为数据构建白名单用户婚姻状况预测模型。预研发现离婚群体违约风险突出，逾期 30+ Lift 高达 1.81。</p>
             <p><strong>传统建模：</strong>设计两阶段级联建模方案，在 XGBoost 基础上探索 TabPFN 模型，OOT 样本 AUC 0.75 / KS 0.37；成功补齐 9957 万用户婚姻标签，模型评分 Top 3% 区域风险识别率达大盘 1.51 倍。</p>
             <p><strong>Agent 探索：</strong>构建 AgentClassifyPipeline 通用框架，打通"特征提取 → SQL 生成 → 逻辑判定 → 报告生成"全流程闭环，代码已合入微信支付代码库。引入 RAG + Few-shot + CoT + MoE 并行专家矩阵，并通过 logprob 机制量化分类置信度。</p>
-            <p><strong>项目成果：</strong>捕获 XGBoost 漏召回的 10% 难识别样本；维持 60% 召回率前提下，查准率较 XGBoost 提升 20%（达 43%）。相关成果已发表腾讯内网 KM 技术好文，并申请发明专利《一种基于大语言模型的自动化标签挖掘方法及系统》。</p>
+            <p><strong>项目成果：</strong>捕获 XGBoost 漏召回的 10% 难识别样本；维持 60% 召回率前提下，查准率较 XGBoost 提升 20%（达 43%）。相关成果已发表腾讯内网 KM 技术好文，并申请发明专利《一种基于大语言模型的自动化标签挖掘方法及系统》；KM 技术好文与发明专利材料可作为成果佐证。</p>
             <div class="tags">
               <span>Multi-Agent</span><span>LLM</span><span>RAG</span><span>XGBoost</span>
               <span>TabPFN</span><span>风控建模</span><span>专利申请中</span>
