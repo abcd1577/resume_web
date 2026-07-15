@@ -496,6 +496,9 @@ img { max-width: 100%; display: block; }
 .about-grid {
   display: grid; grid-template-columns: 1.5fr 1fr; gap: 3rem;
 }
+.about-awards {
+  grid-column: 1 / -1;
+}
 .about-grid p { color: var(--text-soft); margin-bottom: 1rem; }
 .about-grid h3 {
   color: var(--c-primary); margin-bottom: 0.8rem; font-size: 1.1rem;
@@ -724,13 +727,12 @@ img { max-width: 100%; display: block; }
   font-style: normal;
   color: var(--c-primary);
   font-weight: 600;
-  background: var(--c-soft);
-  padding: 1px 6px;
-  border-radius: 4px;
+  padding: 0 0.08rem 0.08rem;
+  border-bottom: 1px solid rgba(47, 91, 164, 0.35);
   font-size: 0.82rem;
   margin-left: 2px;
 }
-[data-theme="dark"] .award-col li em { background: rgba(88,182,233,0.18); color: var(--c-sky); }
+[data-theme="dark"] .award-col li em { color: var(--c-sky); border-bottom-color: rgba(88,182,233,0.45); }
 @media (max-width: 720px) {
   .awards-grid { grid-template-columns: 1fr; }
 }
@@ -1434,7 +1436,17 @@ code {
   .comparison-table { overflow-x: auto; }
   .comparison-table > div { min-width: 620px; }
   .attribution-list > div { grid-template-columns: 1fr; gap: .2rem; }
-  .project-nav ul { display: none; }
+  .project-nav { gap: 0.6rem; }
+  .project-nav .logo { flex: 1 1 auto; }
+  .project-nav ul {
+    order: 3;
+    width: 100%;
+    margin: 0;
+    display: flex;
+    gap: 0.7rem 1rem;
+  }
+  .project-nav ul { flex-wrap: wrap; }
+  .project-nav ul a { font-size: 0.82rem; }
 }
 
 /* ============================================================

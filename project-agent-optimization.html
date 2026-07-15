@@ -51,7 +51,7 @@
       </dl>
       
     </header>
-<h2 id="situation">Situation｜RAG Agent 调优依赖人工经验，难以复现</h2>
+<h2 id="situation">项目背景｜RAG Agent 调优依赖人工经验，难以复现</h2>
 <p>分付规则解释助手需要引用正确业务规则，结合账单入参给出个性化解释，并控制口吻和篇幅。完整链路是“意图识别 → Query 改写 → KB 召回 → LLM 生成”。早期调优依靠人工跑题、翻 badcase、凭经验改 Prompt / KB，再全量回归。</p>
 <figure>
   <img src="assets/agent-manual-tuning-pain-points.png" alt="人工调优中反复清零、修一坏一和震荡循环的四格示意图">
@@ -59,11 +59,11 @@
 </figure>
 <p>这种方式最大的问题不是慢，而是无法回答“为什么改、改在哪里、由哪个 case 触发、回归后是否应该保留”。换人之后，很难从最终 Prompt 反推出历史决策。</p>
 
-<h2 id="task">Task｜把 Prompt 调参变成可追溯、可回滚的工程闭环</h2>
+<h2 id="task">项目目标｜把 Prompt 调参变成可追溯、可回滚的工程闭环</h2>
 <p>我负责把调优链路改造成“评测 → 归因 → 优化 → 验证 → 发布 / 回滚”的可重复流程，并沉淀为可复用 Skill。目标包括：构建真实问题 Harness、采集 Agent 中间态、区分 Prompt 与 KB 的错误归因、生成最小 patch，并用回归门禁决定接受或回滚。</p>
 <p>项目的关键约束是自动化不能越过业务安全边界。规则答疑如果错误修改 KB 或 Prompt，可能影响用户解释和客服口径，因此必须保留人工审批与可审计证据链。</p>
 
-<h2 id="action">Action｜借鉴 TextGrad，建立 Harness、归因树和人工闸门</h2>
+<h2 id="action">技术路径｜借鉴 TextGrad，建立 Harness、归因树和人工闸门</h2>
 <p><strong>第一步是把循环里的 Loss 做可靠。</strong> 我用 261 道真实客服问题构建基线题库，通过 Adams API 并发答题，再由 Gemini 按 0 / 1 / 2 评分。除最终答案外，必须采集 <code>refined_query</code> 与 <code>knowledge_content</code>，否则无法区分检索错误和生成错误。</p>
 <figure>
   <img src="assets/agent-harness-dataset.png" alt="261 道规则答疑基线题库的主题和知识库覆盖分布">
@@ -79,17 +79,10 @@
   <figcaption>图 3 · 端到端优化闭环。第 5、6 步之间设置审归因、审改动、授权上传和接受 / 回滚四道人工闸门。</figcaption>
 </figure>
 
-<h2 id="result">Result｜0 分率下降，迭代从技巧变成工程资产</h2>
+<h2 id="result">项目结果｜0 分率下降，迭代从技巧变成工程资产</h2>
 <p>简历阶段口径下，四轮调优后 0 分率由约 <strong>25% 降至 3%</strong>；每条 patch 均绑定 gradient 与源 case，溯源率 <strong>100%</strong>；单轮迭代由人工约 <strong>2 小时</strong>缩短至约 <strong>20 分钟</strong>。</p>
 <p>更重要的是，题库、变量、中间态、梯度、patch 和回归结果能够串成证据链。产品或后续维护者可以复现修改原因，而不是从最终 Prompt 反推历史。四个踩坑也被固化为流程约束：中间态必采、Prompt / KB 边界、冻结清单和 N≥3 众数规则。</p>
 
-<h2 id="limits">Review｜口径边界与面试追问</h2>
-<ul>
-<li>“约 25%→3%”是简历阶段口径；精确实验路径曾记录约 <strong>17%→3.8%</strong>，两者来自不同阶段基线，不能混为同一次实验。</li>
-<li>自动化不等于无人审批。业务规则风险较高，因此保留四道人工闸门。</li>
-<li>Judge 本身存在噪声，<code>d_suspect</code> 样本不会直接触发线上变量修改。</li>
-<li>待补材料包括脱敏前后 case、每轮 score 分布、ACCEPT / ROLLBACK 时间线和最终测试报告。</li>
-</ul>
     </article>
   </main>
   <footer><p>© 2026 侯奇瑞 · 项目报告依据项目文件夹内《01-完整版》与新增项目图整理</p></footer>

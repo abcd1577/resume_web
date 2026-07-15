@@ -29,7 +29,7 @@
     <header class="report-header">
       <p class="report-kicker">04 · 主要负责人 · 2026.04</p>
       <h1>大模型驱动的发票用户标签体系构建与业务应用</h1>
-      <p class="report-summary">AgentFlow 负责快速生产丰富、可解释的开放标签；后续归纳机制将长尾自由短语收敛为稳定的业务主题、窄口径标签和敏感主题池。</p>
+      <p class="report-summary">项目先用大模型快速挖掘发票中的可解释标签，再把 2,338 种长尾自由标签归纳成完整的发票标签体系，让标签可以入库、圈选、评估，并和产品一起持续共建。</p>
       
       <dl class="report-metrics">
         
@@ -51,58 +51,111 @@
       </dl>
       
     </header>
-<h2 id="situation">Situation｜开放标签足够丰富，但无法直接稳定消费</h2>
-<p>发票试点近一个月覆盖约 <strong>171 万</strong>开通用户，近一年约 <strong>541 万</strong>。AgentFlow 生成了 <strong>2,338 种</strong>自由标签，但约 <strong>76%</strong> 只在单个用户上出现。生成能力解决了“能否快速挖出标签”，却没有解决“标签能否稳定入库和圈选”。</p>
-<p>固定 Schema 容易统计，但新增维度需要改表和全量重跑；长期堆规则或训练专用模型需要持续人力；黑盒分数缺少字面证据，产品很难核对标签为什么成立。发票数据包含 buyer、seller、item、金额和活跃度，并能回落到原始字段，适合作为可解释标签体系试点。</p>
+<h2 id="situation">项目背景｜发票数据未充分使用，长尾标签也需要体系化</h2>
+<p>这个项目的背景有两层。第一层是发票数据信息密度高，但长期很难转化为稳定用户画像。发票里的 buyer、seller、item、金额和活跃度能反映职业、消费场景、经营行为和风险线索，但如果只停留在原始字段或少量固定 Schema，就很难进入后续圈选和策略使用。</p>
+<p>第二层是大模型生成的标签足够丰富，却天然长尾。发票试点近一个月覆盖约 <strong>171 万</strong>开通用户，近一年约 <strong>541 万</strong>。AgentFlow 生成了 <strong>2,338 种</strong>自由标签，但约 <strong>76%</strong> 只在单个用户上出现。生成能力解决了“能否快速挖出标签”，但没有自动解决“标签能否稳定入库、圈选和治理”。</p>
+<p>因此这个项目不是单纯做一次打标，而是探索以大模型 token 换人力：1–2 人快速从发票中挖掘可解释标签，并进一步归纳为可持续消费的发票标签体系，打通“数据挖掘 → 标签资产 → 业务 / 产品使用”。</p>
 
-<h2 id="task">Task｜把自由短语沉淀为可入库、可圈选、可治理的标签资产</h2>
-<p>我的任务不是只完成一次 Agent 打标，而是建立一套持续运转的标签体系：开放标签经过清洗、归并和场景化后，形成业务主题标签、窄口径衍生标签和敏感主题池；<code>Summary + evidence</code> 保留原始语义，供产品评审与规则回流。</p>
-<p>这一任务的难点在于“丰富度”和“稳定性”的平衡。标签太开放会难以统计，标签太固定又会失去长尾发现能力；同时健康等敏感主题必须有治理机制，不能直接混入生活方式标签。</p>
+<h2 id="task">项目目标｜构建能打标、能解释、能共建的完整发票标签体系</h2>
+<p>项目目标分两步。第一步是让系统能稳定打标：从发票中抽取结构化字段、涌现标签和自然语言 Summary，并给出可回溯的 evidence。第二步是把这些结果收敛成一套完整的发票标签体系，让标签能直接用于入库、圈选、评估和产品共建。</p>
+<p>这套体系需要同时满足三个要求：标签要能解释，产品可以对着原始发票证据讨论对错；标签要能共建，产品评审和规则修正可以持续回流；标签要能直接使用，不能停留在一次性的自由文本输出。</p>
 
-<h2 id="action">Action｜先开放挖掘，再稳定归纳，最后产品回流</h2>
+<h2 id="action">技术路径｜先开放挖掘，再稳定归纳，最后产品回流</h2>
 <p><strong>第一步：设计标签供给链路。</strong> 上游 AgentFlow 遵循“代码做确定性规则，LLM 做语义判断”。代码负责清洗、派生、白名单、Schema 校验和置信度重打分；LLM-A 决定搜索哪些陌生实体，LLM-B 负责最终打标与 Summary。每条标签统一输出 <code>value</code>、<code>confidence</code> 和引用真实 buyer / seller / item 的 <code>evidence</code>。</p>
 <figure>
   <img src="assets/invoice-agentflow-technical-design.png" alt="发票标签挖掘 AgentFlow 中代码节点、双大模型、外部搜索与结果校验的技术设计">
   <figcaption>图 1 · AgentFlow 技术设计。双 LLM 将“搜什么”和“打什么标签”解耦，代码节点承担可明确编码的规则。</figcaption>
 </figure>
-<p><strong>第二步：构建标签归纳体系。</strong> 固定字段、涌现短语与 Summary 进入同义清洗和敏感过滤；长尾短语归入稳定主题；主题组合为人群口径；最终入库、圈选、评估和治理，并通过产品评审持续回流。</p>
+<p><strong>第二步：构建完整的发票标签体系。</strong> 固定字段、涌现短语与 Summary 进入同义清洗和敏感过滤；长尾短语归入稳定主题；主题组合为人群口径；最终沉淀为用户标签长表 / 宽表，支持入库、圈选、评估和治理，并通过产品评审持续回流。</p>
 <figure>
   <img src="assets/invoice-taxonomy-delivery-pipeline.png" alt="从大模型发票抽取信号到稳定业务标签体系的构建和交付流程">
   <figcaption>图 2 · 标签归纳体系与交付流程。固定字段保证跨用户可比，开放标签保留丰富度，映射规则和三级体系将其收敛为可消费标签。</figcaption>
 </figure>
+<figure>
+  <img src="assets/invoice-complete-taxonomy.png" alt="完整发票标签体系明细表，包含一级主题、二级标签、三级标签、用户覆盖和风险指标">
+  <figcaption>图 3 · 完整发票标签体系。开放标签经过归纳后沉淀为 L1-L3 taxonomy，并保留用户覆盖、风险指标和可消费字段。</figcaption>
+</figure>
 <p><strong>第三步：用评测和裁判复核验证方案。</strong> 固定 Schema 约有 20 个枚举字段，单用户通常输出 3–7 个标签且包含较多 unknown；涌现方案输出 2,338 种自由短语，单用户得到 5–10 个有效标签，并能细化到具体职业、会员和生活方式。</p>
 <figure>
   <img src="assets/invoice-evaluation-workflow.png" alt="发票标签方案从调研、设计、抽样、评测到裁判复核的实验流程">
-  <figcaption>图 3 · 方案评估与裁判复核流程。差异样本经过二次判断，避免只凭少量案例选择方案。</figcaption>
+  <figcaption>图 4 · 方案评估与裁判复核流程。差异样本经过二次判断，避免只凭少量案例选择方案。</figcaption>
 </figure>
-<p><strong>第四步：工程提效与二次 Agent。</strong> prefix cache、搜索摘要截断和小模型切换用于降低推理成本；二次 Agent 使用阶段一的 <code>buyer_top5</code>、<code>occupation</code> 和原始证据，将开放语义收敛为严格二分类，只对争议样本调用裁判 Agent。</p>
+<p><strong>第四步：工程提效与二次 Agent。</strong> 发票全量生产如果直接按原链路跑，成本和耗时都不可接受。我主要从 prefix cache、搜一搜摘要截断、模型选型和并行度调优几方面压缩成本：针对约 <strong>171 万</strong>开通有发票用户，将全量生产由约 <strong>10 天</strong>压至 <strong>2–6 天</strong>。二次 Agent 则使用阶段一的 <code>buyer_top5</code>、<code>occupation</code> 和原始证据，将开放语义收敛为严格二分类，只对争议样本调用裁判 Agent。</p>
 <figure>
   <img src="assets/invoice-parallelism-benchmark.png" alt="发票标签批处理并行度从 8 到 512 与端到端耗时的基准测试">
-  <figcaption>图 4 · 并行度与运行耗时。256 附近是本次环境的最优点，继续增加并发反而变慢。</figcaption>
+  <figcaption>图 5 · 并行度与运行耗时。256 附近是本次环境的最优点，继续增加并发反而变慢。</figcaption>
 </figure>
 <figure>
   <img src="assets/invoice-secondary-agent-evaluation.png" alt="主 Agent 输出经口径统一 Agent 和裁判 Agent 复核的二阶段评估流程">
-  <figcaption>图 5 · 二次 Agent 与裁判 Agent 的复核链路。内部数据表名已脱敏。</figcaption>
+  <figcaption>图 6 · 二次 Agent 与裁判 Agent 的复核链路。内部数据表名已脱敏。</figcaption>
 </figure>
 
-<h2 id="result">Result｜形成标签资产闭环，并支撑业务评估与治理</h2>
+<h2 id="result">项目结果｜形成标签资产闭环，并支撑业务评估与治理</h2>
 <p>以大厂员工金标为例，Agent Accuracy 为 <strong>0.592</strong>，V4 为 0.490；Agent Precision 为 <strong>0.675</strong>，V4 为 0.488。去除 unknown 后 Accuracy 提升 <strong>12.15 个百分点</strong>；裁判 Agent 在分歧样本中支持新方案的比例为 <strong>99.18%</strong>。</p>
-<p>工程侧 prefix cache 提速约 <strong>21%</strong>，搜索摘要截断提速约 <strong>36%</strong> 且 F1 未下降；切换小模型后，170 万用户推理周期由约 <strong>10 天缩短至 2.4 天</strong>。三级体系进一步在九个一级主题上检查覆盖，并对 138 个可评估标签统计 0+ 金额违约 Lift。</p>
+<p>工程侧 prefix cache 提速约 <strong>21%</strong>，搜索摘要截断提速约 <strong>36%</strong> 且 F1 未下降；切换小模型后，170 万用户推理周期由约 <strong>10 天</strong>压缩到 <strong>2–6 天</strong>。三级体系进一步在九个一级主题上检查覆盖，并对 138 个可评估标签统计 0+ 金额违约 Lift。</p>
 <figure>
   <img src="assets/invoice-taxonomy-evaluation.png" alt="发票三级标签体系的一级主题覆盖和金额违约 Lift 分布">
-  <figcaption>图 6 · 标签体系覆盖广度与风险区分度。图中只包含汇总数据，不含用户级明细。</figcaption>
+  <figcaption>图 7 · 标签体系覆盖广度与风险区分度。图中只包含汇总数据，不含用户级明细。</figcaption>
 </figure>
-<p>HVLR 是主题归纳的代表案例。V1 直接在 50 万以上涌现表达中做语义匹配，Lift 约 1.07；V2 改为九类正向主题命中并叠加负向排除，源材料记录核心人群 Lift 约 <strong>0.14</strong>。敏感标签治理则把健康主题池从 <strong>12.05 万</strong>压到目标约 <strong>1.5–3 万</strong>，形成十二类负向主题和排除规则。</p>
+<p>更具体地看，标签体系不是只留下一个 HVLR 结论，而是把不同来源的发票信号整理成可讨论的标签积木。例如，“商旅达人 / 差旅达人 / 高频商务出行”统一到“商务差旅”；“山姆会员”沉淀为会员与消费偏好标签；“燃油车主 / 新能源车主”归到车辆与出行标签；“腾讯员工 / 大厂互联网员工 / 互联网从业者”则进入职业身份层级，并在需要严格口径时交给二次 Agent 做 0/1 复核。</p>
+<p>这些标签进入业务使用时，不直接按单个短语圈人，而是先沉淀为 <code>tag_code</code>、一级主题、二级主题和可读标签名。对外展示时我只保留 Lift 口径，避免暴露内部人群规模和表字段。下面是标签体系中可评估标签的样例：</p>
+<table>
+  <thead>
+    <tr>
+      <th>tag_code</th>
+      <th>l1</th>
+      <th>l2</th>
+      <th>tag_name</th>
+      <th>违约0+金额占比 Lift</th>
+      <th>违约7+金额占比 Lift</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>P08-01-001</td>
+      <td>职业与企业身份</td>
+      <td>企业</td>
+      <td>外企</td>
+      <td>0.55</td>
+      <td>0.53</td>
+    </tr>
+    <tr>
+      <td>P07-01-001</td>
+      <td>生活方式兴趣健康</td>
+      <td>健康</td>
+      <td>健康关注者</td>
+      <td>0.55</td>
+      <td>0.56</td>
+    </tr>
+    <tr>
+      <td>P02-04-001</td>
+      <td>出行与差旅</td>
+      <td>出行</td>
+      <td>短途/多平台出行</td>
+      <td>0.59</td>
+      <td>0.51</td>
+    </tr>
+    <tr>
+      <td>P04-02-001</td>
+      <td>平台与会员生态</td>
+      <td>商超</td>
+      <td>仓储会员店</td>
+      <td>0.61</td>
+      <td>0.67</td>
+    </tr>
+    <tr>
+      <td>P07-01-002</td>
+      <td>生活方式兴趣健康</td>
+      <td>健康</td>
+      <td>健身运动</td>
+      <td>0.64</td>
+      <td>0.99</td>
+    </tr>
+  </tbody>
+</table>
+<p>这类表格说明：标签体系的价值不在“某个涌现词听起来像高净值”，而在于每个标签都有稳定编码、主题层级和可验证的 Lift 指标。另一个更严格的核心口径中，命中 2+ 正向主题并排除负向主题的 7+ Lift 约 <strong>0.14</strong>，也验证了数据驱动归纳优于直接做语义相似匹配。</p>
 <p>最终交付不是一批一次性标签，而是可入库、可圈选、可评估、可审计的标签资产。AgentFlow 保留语义丰富度，归纳体系提供稳定口径，两者可以分别迭代。</p>
 
-<h2 id="limits">Review｜口径、隐私与待补材料</h2>
-<ul>
-<li>发票是试点，方法可迁移到商业支付和黑灰治理，但迁移效果需要在新场景重新验证。</li>
-<li>裁判 Agent 的 99.18% 是分歧样本支持率，不等同于全量准确率。</li>
-<li>HVLR 的 “Lift 约 0.14” 在源材料中缺少完整定义，当前保留原值并明确待补口径。</li>
-<li>涉及用户级明细、真实 UIN、商户证据和内部表名的材料不直接对外展示。</li>
-<li>下一步需要补充脱敏用户案例、HVLR 分层图、敏感治理漏斗和版本演进表。</li>
-</ul>
     </article>
   </main>
   <footer><p>© 2026 侯奇瑞 · 项目报告依据项目文件夹内《01-完整版》整理</p></footer>

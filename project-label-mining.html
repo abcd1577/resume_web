@@ -29,7 +29,7 @@
     <header class="report-header">
       <p class="report-kicker">01 · 主要负责人 · 2026.01–至今</p>
       <h1>面向征信补全的婚姻状况标签挖掘与轻量化落地</h1>
-      <p class="report-summary">先用两阶段树模型完成近亿级稳定打标，再用 Multi-Agent 补足难例、解释与冷启动，最后以结构编码、参数高效微调和蒸馏探索低成本规模化。</p>
+      <p class="report-summary">项目先用两阶段树模型完成婚姻状态的规模化补齐，再用 AgentFlow 解决解释、产品联动和少样本冷启动问题；外部版补充表格 LLM 微调与蒸馏实验，说明如何把高成本推理压到可部署的小模型。</p>
       
       <dl class="report-metrics">
         
@@ -51,19 +51,20 @@
       </dl>
       
     </header>
-<h2 id="situation">Situation｜字段缺失影响画像与风险识别</h2>
-<p>银行征信中的婚姻字段存在缺失，而预研显示离婚群体逾期 30+ Lift 约为 <strong>1.81</strong>。这意味着婚姻状态不仅是画像补全字段，也会影响白名单授信、风险分层和后续人群策略。</p>
-<p>当时的约束并不只是“训练一个分类器”：近亿级批处理要求低成本和稳定性，新标签与少样本场景要求快速冷启动，业务评审还需要逐条解释判定依据。单一模型很难同时满足这三类目标。</p>
+<h2 id="situation">项目背景｜征信字段缺失影响画像与风险识别</h2>
+<p>银行征信中的婚姻字段存在缺失，而预研显示离婚群体逾期 30+ Lift 约为 <strong>1.81</strong>。婚姻状态不是单纯的画像字段，也会影响白名单授信、风险分层和后续人群策略。</p>
+<p>项目最早从传统树模型开始：先判断能否用微信行为数据稳定补齐婚姻状态，再看这个标签在风险识别上是否有增益。后续引入 AgentFlow，不是为了替代树模型，而是补树模型不擅长的部分：解释理由、和产品一起核对样本、在黑产冷启动等新场景里快速复用少量样本。</p>
 
-<h2 id="task">Task｜搭建可规模化、可解释、可压缩的标签挖掘链路</h2>
-<p>我的目标是把婚姻状态标签挖掘拆成三层能力：第一层用 XGBoost / TabPFN 完成稳定的大规模打标；第二层用 Multi-Agent 补足难例、解释与冷启动；第三层用表格 LLM 微调和蒸馏探索低成本部署。</p>
-<p>这个拆分的核心不是让 LLM 替代树模型，而是让不同模型承担各自最合适的部分：树模型负责近亿级稳态任务，Agent 负责解释和难例，蒸馏模型负责把高成本语义能力压到可部署范围。</p>
+<h2 id="task">项目目标｜从规模化补标扩展到可解释、可迁移的标签开发链路</h2>
+<p>我把项目拆成三层。第一层是传统建模，用 XGBoost / TabPFN 完成大规模、低成本、稳定的婚姻状态补齐；第二层是 AgentFlow，用 RAG、Few-shot 和多专家推理补充难例、解释和少样本冷启动能力；第三层是外部版展示的微调与蒸馏实验，用来探索如何把高成本 Agent 推理沉淀到更便宜的小模型。</p>
+<p>这样做的好处是边界清楚：树模型负责近亿级稳态任务，Agent 负责解释和新标签探索，小模型承接后续低成本部署。每一层都服务于同一个目标：把标签从“能预测”推进到“能讨论、能复用、能规模化”。</p>
 
-<h2 id="action">Action｜三层方案：树模型打底，Agent 补难例，小模型承接规模化</h2>
-<p><strong>第一步是规模化底座。</strong> 我采用两阶段级联建模，以 XGBoost 为主路径，并探索 TabPFN 在表格小样本任务上的补充价值。评估不仅看 OOT AUC / KS，也看高分段风险识别率，避免离线排序指标与业务使用脱节。</p>
-<p><strong>第二步是 Agent 增量层。</strong> 我将结构化行转换为键值对或 Markdown 文本，把标注样本写入向量库，通过 RAG + Few-shot 动态检索相似案例；新旧标签由意图路由进入不同路径；并行专家分别分析不同证据，最终用类别 token 的 logprob 作为可排序置信度。完整链路可以概括为：</p>
+<h2 id="action">技术路径｜先树模型打底，再用 AgentFlow 补解释和冷启动</h2>
+<p><strong>第一阶段是传统建模。</strong> 我采用两阶段级联建模，以 XGBoost 为主路径，并探索 TabPFN 在表格小样本任务上的补充价值。评估不仅看 OOT AUC / KS，也看 Top 分段风险识别率，避免离线排序指标和业务使用脱节。</p>
+<p><strong>第二阶段是 AgentFlow 标签挖掘。</strong> 我将结构化行转换为键值对或 Markdown 文本，把标注样本写入向量库，通过 RAG + Few-shot 动态召回相似案例；新旧标签由意图路由进入不同路径；并行专家从多个证据维度分析，最终用类别 token 的 logprob 作为可排序置信度。完整链路可以概括为：</p>
 <blockquote><p>特征提取 → SQL 生成 → 逻辑判断 → 报告生成</p></blockquote>
-<p><strong>第三步是微调与蒸馏。</strong> 表格压成一维文本会损失列身份和二维位置，因此加入 <code>coltag</code> 列标记与 <code>pos2d</code> 单元格坐标。教师模型使用 Qwen3.5-9B，配合 LoRA / DoRA 做生成式 SFT；学生模型为 Qwen3.5-0.8B。蒸馏目标为：</p>
+<p>这一步的价值主要在产品协作和泛化能力。Agent 会给出可解释理由，产品和算法可以对着具体 evidence 讨论标签是否成立；面对黑产冷启动、商旅人士等新场景时，也能用少量样本和规则快速启动，而不必每次从头训练一套大样本模型。</p>
+<p><strong>第三阶段是外部版的微调与蒸馏探索。</strong> 表格压成一维文本会损失列身份和二维位置，因此加入 <code>coltag</code> 列标记与 <code>pos2d</code> 单元格坐标。教师模型使用 Qwen3.5-9B，配合 LoRA / DoRA 做生成式 SFT；学生模型为 Qwen3.5-0.8B。蒸馏目标为：</p>
 <p>$$
 \mathcal{L}_{KD}
 =\alpha\,\mathrm{CE}(y,p_s)
@@ -74,12 +75,12 @@ $$</p>
 <p>业务数据不便公开时，我用 heart、blood、diabetes、car、creditg 等 TabLLM 公开数据集复现同一套序列化、PEFT、结构编码和蒸馏管线。代表性结构编码结果如下：</p>
 <table><thead><tr><th>数据集</th><th style="text-align: right;">纯文本</th><th style="text-align: right;">pos2d</th></tr></thead><tbody><tr><td>heart</td><td style="text-align: right;">75.0</td><td style="text-align: right;">79.3</td></tr><tr><td>diabetes</td><td style="text-align: right;">64.9</td><td style="text-align: right;">73.2</td></tr><tr><td>blood</td><td style="text-align: right;">64.9</td><td style="text-align: right;">71.0</td></tr></tbody></table>
 
-<h2 id="result">Result｜近亿级补标、难例补回与技术沉淀</h2>
-<p>传统建模在 OOT 上取得 <strong>AUC 0.75、KS 0.37</strong>，补齐约 <strong>9,957 万</strong>用户婚姻标签；评分 Top 3% 区域的风险识别率达到大盘 <strong>1.51 倍</strong>。Agent 侧补回 XGBoost 漏召的约 <strong>10%</strong> 难识别样本，在 60% 召回率下查准率达到 <strong>43%</strong>，相对 XGBoost 提升约 <strong>20%</strong>。</p>
+<h2 id="result">项目结果｜近亿级补标、难例补回与技术沉淀</h2>
+<p>传统建模在 OOT 上取得 <strong>AUC 0.75、KS 0.37</strong>，补齐约 <strong>9,957 万</strong>用户婚姻标签；离婚标签评分 Top 3% 区域的风险识别率达到大盘 <strong>1.51 倍</strong>。Agent 侧补回 XGBoost 漏召的约 <strong>10%</strong> 难识别样本，在 60% 召回率下查准率达到 <strong>43%</strong>，相对 XGBoost 提升约 <strong>20%</strong>。</p>
 <p>在公开集上，32-shot 下 LoRA 与 DoRA 接近，AdaLoRA 多数更弱；4-shot 时 LoRA 相对 XGBoost 更占优，样本增加后两者互有胜负。公平蒸馏要求在同一批 128 个样本上比较 gold-SFT 与 KD，KD 相对 SFT 的 AUC 差值分别为 heart +0.7、blood +14.7、diabetes −0.5、car +1.1。9B 教师 OOT AUC / KS 为 <strong>0.72 / 0.45</strong>，0.8B 学生为 <strong>0.71 / 0.41</strong>。</p>
 <p>相关工作沉淀为腾讯内网 KM 技术文章，并申请发明专利《一种基于大语言模型的自动化标签挖掘方法及系统》。对面试表达而言，这个项目的价值不是单一婚姻标签，而是一条可迁移到其他用户画像任务的标签开发链路。</p>
 
-<h2 id="evidence">Evidence｜成果佐证</h2>
+<h2 id="evidence">成果佐证｜KM 技术好文与发明专利</h2>
 <div class="report-grid">
   <section class="evidence-panel">
     <h3>KM 技术好文</h3>
@@ -101,14 +102,6 @@ $$</p>
   </section>
 </div>
 
-<h2 id="limits">Review｜边界、追问与待补证据</h2>
-<ul>
-<li>LLM / Agent 不适合全面替代 GBDT。大样本、高 QPS、以数值特征为主的任务仍优先使用树模型。</li>
-<li>Agent 的优势是解释、冷启动与难例补充；稳态批量任务更适合微调后的小模型。</li>
-<li>蒸馏上限受教师约束，硬标签 AUC 与概率排序 AUC 必须明确口径。</li>
-<li>公开集实验用于说明方法，不等同于业务数据结果；业务表细节继续按脱敏要求处理。</li>
-<li>KM 与专利材料已经作为成果佐证补充；后续可继续增加脱敏总架构图、Lift / 消融图，以及个人与协作者分工说明。</li>
-</ul>
     </article>
   </main>
   <footer><p>© 2026 侯奇瑞 · 项目报告依据项目文件夹内《01-完整版》整理</p></footer>
