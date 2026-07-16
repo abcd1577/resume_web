@@ -1,0 +1,1882 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>从手工试错到可回滚闭环：RAG Agent 的 TextGrad 式调优实践 · 侯奇瑞</title>
+  <meta name="description" content="基于 TextGrad 范式的 RAG Agent 调优方法论与分付规则解释助手实战。" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" crossorigin="anonymous" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (!window.renderMathInElement) return;
+      window.renderMathInElement(document.body, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false }
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+</head>
+<body>
+  <nav class="nav project-nav">
+    <a href="index.html" class="logo">Qirui Hou.</a>
+    <ul>
+      <li><a href="index.html#research">返回研究成果</a></li>
+      <li><a href="index.html#projects">全部项目</a></li>
+    </ul>
+    <button id="themeToggle" aria-label="切换主题">🌙</button>
+  </nav>
+  <main class="project-library single-project">
+    <article class="project-report article-report">
+      <header class="report-header">
+        <p class="report-kicker">腾讯 KM · Agent 调优</p>
+        <h1>借鉴 TextGrad 思想的 RAG Agent 调优方法与实战</h1>
+        <p class="report-summary">从为什么要调优、会遇到什么问题，到 TextGrad 六步闭环、Prompt/KB 归因决策树与人工闸门，最后用分付规则解释助手完整走一遍落地过程。</p>
+      </header>
+<blockquote class="article-quote">
+<p><strong>导语</strong></p>
+<p>本文介绍一套基于 TextGrad 范式的 <strong>RAG Agent 调优方法论</strong>：从<strong>为什么要调优</strong>，到<strong>会遇到什么问题</strong>，再到<strong>整体框架</strong>、<strong>具体方案</strong>，最后用<strong>真实业务项目</strong>完整走一遍落地过程。</p>
+<p><strong>文章结构</strong></p>
+<table>
+<thead>
+<tr>
+<th>章节</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>一、背景与动机</strong></td>
+<td>为什么 RAG Agent 必须做系统化调优</td>
+</tr>
+<tr>
+<td><strong>二、遇到的问题</strong></td>
+<td>手工调优困境 + 复合 Agent 典型痛点</td>
+</tr>
+<tr>
+<td><strong>三、整体框架</strong></td>
+<td>TextGrad 范式 + 六步闭环 + 人机协作设计</td>
+</tr>
+<tr>
+<td><strong>四、具体方案</strong></td>
+<td>归因决策树、工程纪律、Validation Gate、Skill 设计</td>
+</tr>
+<tr>
+<td><strong>五、业务实践</strong></td>
+<td><strong>以「分付规则解释助手」为例</strong>的评测、迭代与踩坑</td>
+</tr>
+</tbody>
+</table>
+<p><strong>适合谁读</strong>：负责 Agent 效果优化、Prompt 工程、知识库维护的工程 / 产品 / 算法同学。</p>
+<p><strong>快速跳转</strong>：方法论 <strong>§三 → §4.1</strong>；看落地效果直接读 <strong>§五</strong>。</p>
+</blockquote>
+<hr />
+<h2 id="一背景与动机">一、背景与动机</h2>
+<h3 id="11-agent-调优在解决什么问题">1.1 Agent 调优在解决什么问题</h3>
+<p>LLM 应用已从「单模型问答」演进为 <strong>Compound AI System</strong>：意图识别 → Query 改写 → 检索增强（RAG）→ LLM 生成，中间还可能有工具调用、代码节点等。对这类 Agent 而言，<strong>Prompt</strong> 与 <strong>知识库（KB）</strong> 是两类最常调整、也最容易改错的「文本变量」。</p>
+<p>调优的目标不是「把 Prompt 写得更长」，而是建立可重复的闭环：<strong>可评测 → 可归因 → 可改动 → 可验收 → 可回滚</strong>。</p>
+<h3 id="12-为什么要做系统化调优">1.2 为什么要做系统化调优</h3>
+<p>典型客服 / 规则答疑类 Agent 必须同时做到：</p>
+<ul>
+<li>引用<strong>正确</strong>的业务规则（来自 KB，不能幻觉）</li>
+<li>结合<strong>用户上下文</strong>（入参、历史状态）做个性化解释</li>
+<li>控制口吻、篇幅，<strong>答所问</strong></li>
+</ul>
+<p>任一环节出错即为 badcase。没有系统化调优，团队无法可靠回答三个问题：<strong>现在效果怎么样？错在哪里？改了有没有变好？</strong></p>
+<h3 id="13-本文要交付什么">1.3 本文要交付什么</h3>
+<table>
+<thead>
+<tr>
+<th>交付物</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>方法论</strong></td>
+<td>TextGrad 风格 Forward / Backward / Step + Prompt/KB 双变量归因</td>
+</tr>
+<tr>
+<td><strong>工程框架</strong></td>
+<td>六步闭环 + Validation Gate + 4 道人工闸门</td>
+</tr>
+<tr>
+<td><strong>可复用 Skill</strong></td>
+<td>评测、归因、优化、回归一体化的对话驱动工具链</td>
+</tr>
+<tr>
+<td><strong>实战案例</strong></td>
+<td>见<strong>§五</strong>（封闭域 RAG Agent 的完整落地）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="二遇到的问题">二、遇到的问题</h2>
+<h3 id="21-通用困境手工调优的三条死胡同">2.1 通用困境：手工调优的三条死胡同</h3>
+<p>在引入 TextGrad 之前，我们的调优方式和其他项目一样——<strong>跑题 → 翻 badcase → 凭经验改 → 再跑</strong>。实践中反复遇到三个问题：</p>
+<table>
+<thead>
+<tr>
+<th>困境</th>
+<th>具体表现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>不可复现</strong></td>
+<td>改动全凭个人直觉，换个人接手不知道「为什么这么改」</td>
+</tr>
+<tr>
+<td><strong>会震荡</strong></td>
+<td>这轮把某段话术加进 Prompt，下轮看到新 badcase 又删掉</td>
+</tr>
+<tr>
+<td><strong>会改坏</strong></td>
+<td>把具体业务数值写死进 Prompt，覆盖了测过的题，没测过的全错</td>
+</tr>
+</tbody>
+</table>
+<p>神经网络早期也面临同样的问题，直到<strong>反向传播 + 自动微分</strong>（PyTorch）把优化变成了标准化流程。2024 年 Stanford 团队提出的 <strong>TextGrad</strong> 论文，正是把这套范式迁移到了 LLM 复合系统上——<strong>「梯度」不再是数字，而是一段自然语言反馈</strong>。</p>
+<h3 id="22-rag-agent-项目的典型痛点">2.2 RAG Agent 项目的典型痛点</h3>
+<p>在缺少标准化调优框架时，复合 Agent 项目通常会同时撞上以下问题：</p>
+<table>
+<thead>
+<tr>
+<th>痛点</th>
+<th>典型表现</th>
+<th>后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>效果差</strong></td>
+<td>评测集低分 / 零分率高</td>
+<td>事实性错误、答非所问</td>
+</tr>
+<tr>
+<td><strong>归因不可追溯</strong></td>
+<td>改 Prompt 还是改 KB 靠猜</td>
+<td>KB 改对了、Prompt 改坏了，或反过来</td>
+</tr>
+<tr>
+<td><strong>改动震荡</strong></td>
+<td>同一规则加了又删</td>
+<td>2 分题被打成 0 分，整体回退</td>
+</tr>
+<tr>
+<td><strong>评测不可靠</strong></td>
+<td>RAG 空召回、Judge 有噪声</td>
+<td>优化方向被基础设施或评分误差带偏</td>
+</tr>
+<tr>
+<td><strong>迭代慢</strong></td>
+<td>人工翻 badcase + 改文件 + 发布 + 回归</td>
+<td>无法支撑高频小步实验</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-现有方法填不上哪个坑">2.3 现有方法填不上哪个坑</h3>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>解决了什么</th>
+<th>仍缺什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>手工 Prompt Engineering</td>
+<td>灵活</td>
+<td>不可复现、易震荡</td>
+</tr>
+<tr>
+<td>DSPy</td>
+<td>Pipeline 结构化</td>
+<td>不深究「为什么错」、不区分 KB</td>
+</tr>
+<tr>
+<td>TextGrad 论文</td>
+<td>Forward/Backward/Step 通用框架</td>
+<td><strong>不区分 Prompt vs KB 双变量</strong>、全自动无闸门</td>
+</tr>
+<tr>
+<td>ProTeGi</td>
+<td>文本梯度</td>
+<td>只做 Prompt 优化</td>
+</tr>
+</tbody>
+</table>
+<p>更完整的对比：</p>
+<table>
+<thead>
+<tr>
+<th>方法</th>
+<th>核心思路</th>
+<th>优势</th>
+<th>局限</th>
+<th>我们的选择</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>手工 Prompt Engineering</strong></td>
+<td>人改 prompt 看效果</td>
+<td>灵活、零成本</td>
+<td>不可复现、易震荡</td>
+<td>❌ 已淘汰</td>
+</tr>
+<tr>
+<td><strong>DSPy</strong></td>
+<td>Pipeline 编程化 + 自动选 few-shot</td>
+<td>结构化</td>
+<td>主要优化 demonstration，不深究「为什么错」</td>
+<td>部分借鉴（结构化产物）</td>
+</tr>
+<tr>
+<td><strong>ProTeGi</strong></td>
+<td>文本梯度优化 prompt</td>
+<td>有 gradient 概念</td>
+<td>只做 prompt，不区分 KB</td>
+<td>借鉴 gradient 思想</td>
+</tr>
+<tr>
+<td><strong>TextGrad</strong></td>
+<td>通用 forward/backward/step</td>
+<td>API 同构、多任务通用</td>
+<td>全自动、单变量</td>
+<td><strong>借鉴框架，加归因 + 人工闸门</strong></td>
+</tr>
+<tr>
+<td><strong>本项目 Skill</strong></td>
+<td>TextGrad + 归因决策树 + 4 闸门</td>
+<td>可复现、可审计、双变量优化</td>
+<td>需人工参与 (~28min/轮)</td>
+<td>✅ 当前方案</td>
+</tr>
+</tbody>
+</table>
+<p><strong>核心缺口</strong>：RAG Agent 有两类异构可优化变量（Prompt + KB），badcase 来了「该改哪儿」没有标准答案——这是本文方案要补的关键一环（见 <strong>§4.1</strong>）。</p>
+<hr />
+<h2 id="三解决问题的整体框架">三、解决问题的整体框架</h2>
+<blockquote class="article-quote">
+<p>本章回答：<strong>用什么范式组织调优？端到端闭环长什么样？相对 TextGrad 论文加了什么？</strong></p>
+</blockquote>
+<h3 id="31-范式选择textgrad-llm-时代的-pytorch">3.1 范式选择：TextGrad = LLM 时代的 PyTorch</h3>
+<blockquote class="article-quote">
+<p>参考文献：<em>TextGrad: Automatic "Differentiation" via Text</em>（arXiv 2406.07496v1, 2024.06）</p>
+</blockquote>
+<h4 id="pytorch-与-textgrad-的镜像对照">PyTorch 与 TextGrad 的镜像对照</h4>
+<p>TextGrad 最聪明的设计是 <strong>API 与 PyTorch 同构</strong>：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>PyTorch</th>
+<th>TextGrad</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>变量</td>
+<td>tensor（数值）</td>
+<td>$\texttt{tg.Variable}$（文本）</td>
+</tr>
+<tr>
+<td>前向</td>
+<td>$y = \text{model}(x)$</td>
+<td>$\text{response} = \text{LLM}(\text{prompt}, x)$</td>
+</tr>
+<tr>
+<td>损失</td>
+<td>$\mathcal{L} = \text{MSE}(y, \text{gt})$</td>
+<td>$\text{evaluation} = \text{LLM}_{\text{judge}}(\text{response}, \text{gt})$</td>
+</tr>
+<tr>
+<td>反向</td>
+<td>$\mathcal{L}.\text{backward}()$</td>
+<td>$\text{evaluation}.\text{backward}()$</td>
+</tr>
+<tr>
+<td>梯度</td>
+<td>$\partial \mathcal{L}/\partial w$（数值向量）</td>
+<td>$\partial \mathcal{L}/\partial \text{prompt}$（自然语言反馈）</td>
+</tr>
+<tr>
+<td>优化器</td>
+<td>SGD / Adam</td>
+<td>TGD（Textual Gradient Descent）</td>
+</tr>
+<tr>
+<td>更新</td>
+<td>$w \leftarrow w - \eta \cdot \partial \mathcal{L}/\partial w$</td>
+<td>$\text{prompt}_{\text{new}} = \text{TGD.step}(\text{prompt}, \partial \mathcal{L}/\partial \text{prompt})$</td>
+</tr>
+</tbody>
+</table>
+<p>代码几乎一字不差：</p>
+<pre><code class="language-python"># PyTorch                                # TextGrad
+optimizer = torch.optim.SGD(params)      optimizer = tg.TGD(params)
+loss = criterion(model(x), y)            loss = loss_fn(model(x), y)
+loss.backward()                          loss.backward()
+optimizer.step()                         optimizer.step()
+</code></pre>
+<figure class="article-figure"><img src="assets/km-agent-textgrad/textgrad-analogy.svg" alt="TextGrad 与 PyTorch 的抽象对照" loading="lazy" /><figcaption>图1 · TextGrad 与 PyTorch 的抽象对照（论文 Fig.1）</figcaption></figure>
+<p>一句话：<strong>把 Agent 类比神经网络计算图——Prompt / KB 为文本变量，评测 Forward 产出 answer，Judge LLM 为 Loss，Backward / Optimizer 双角色完成梯度计算与变量更新。</strong></p>
+<p>论文 §2 先用一个最小「双 LLM」系统把这套镜像写清楚。记 <code>+</code> 为字符串拼接，<code>LLM(x)</code> 表示把 <code>x</code> 作为 prompt 送入模型：</p>
+<div class="math-display">$$
+\text{Prediction} = \text{LLM}(\text{Prompt} + \text{Question}) \tag{1}
+$$</div>
+
+<div class="math-display">$$
+\text{Evaluation} = \text{LLM}(\text{Evaluation Instruction} + \text{Prediction}) \tag{2}
+$$</div>
+
+<p>整条链可以写成（论文 Fig.1 右侧 Blackbox AI System）：</p>
+<div class="math-display">$$
+\text{Prompt} + \text{Question} \xrightarrow{\text{LLM}} \text{EvalInstr} + \text{Prediction} \xrightarrow{\text{LLM}} \text{Evaluation} \tag{3}
+$$</div>
+
+<p>对 Prompt 求「文本梯度」，就是链式法则在 LLM 边上的实例化。记 $\nabla_{\text{LLM}}$ 为边上的梯度算子——输出不是数字，而是一段自然语言反馈：</p>
+<div class="math-display">$$
+\frac{\partial \text{Evaluation}}{\partial \text{Prediction}} = \nabla_{\text{LLM}}(\text{Prediction}, \text{Evaluation}) \tag{4}
+$$</div>
+
+<div class="math-display">$$
+\frac{\partial \text{Evaluation}}{\partial \text{Prompt}} = \nabla_{\text{LLM}}\!\left(\text{Prompt}, \text{Prediction}, \frac{\partial \text{Evaluation}}{\partial \text{Prediction}}\right) \tag{5}
+$$</div>
+
+<p>其中 $\circ$ 在 Eq.(5) 里表示「把下游批评继续向上游传播」：不是数值乘法，而是把 Eq.(4) 产出的批评文本塞进上下文，再调一次 LLM，生成对 Prompt 的改进建议。</p>
+<p>对任意 $x \xrightarrow{\text{LLM}} y \xrightarrow{\text{LLM}} L$，梯度算子的通用形式是：</p>
+<div class="math-display">$$
+\frac{\partial L}{\partial x} = \nabla_{\text{LLM}}\!\left(x, y, \frac{\partial L}{\partial y}\right) \tag{6}
+$$</div>
+
+<p><strong>梯度的本质 = 一段自然语言</strong>：「你这个 prompt 在 X 情况下表现不好，因为 Y，可以从 Z 角度改进。」我们 Skill 里 <code>01_diagnosis.md</code> 的 <code>gradient_text</code> 字段，就是 Eq.(6) 的工程化产物。</p>
+<p>数值优化用标准 SGD 做减法；TextGrad 用 <strong>TGD（Textual Gradient Descent）</strong> 让 LLM 读反馈后改写变量：</p>
+<div class="math-display">$$
+\theta_{\text{new}} = \theta - \frac{\partial L}{\partial \theta} \tag{7}
+$$</div>
+
+<div class="math-display">$$
+\text{Prompt}_{\text{new}} = \text{TGD.step}\!\left(\text{Prompt}, \frac{\partial \text{Evaluation}}{\partial \text{Prompt}}\right) \tag{8}
+$$</div>
+
+<div class="math-display">$$
+x_{\text{new}} = \text{TGD.step}\!\left(x, \frac{\partial L}{\partial x}\right) \triangleq \text{LLM}\!\left(\text{``Below are the criticisms on \{}x\{\}: \{}\tfrac{\partial L}{\partial x}\{\}. Incorporate the criticisms, and produce a new variable.''}\right) \tag{9}
+$$</div>
+
+<p>Optimizer 输出必须包裹在 <code>&lt;IMPROVED_VARIABLE&gt;...&lt;/IMPROVED_VARIABLE&gt;</code> 标签内——对应 Skill 里 <code>02_plan.md</code> 的 patch 块。<strong>Backward 只产反馈（Eq.6），Optimizer 只产新版本（Eq.9）</strong>，两条链路分开，每条改动才可追溯。</p>
+<blockquote class="article-quote">
+<p><strong>RAG Agent 映射（抽象）</strong>：Prompt ↔ 系统指令；Question ↔ 测试题 + 上下文入参；Prediction ↔ <code>answer</code>；Evaluation ↔ Judge 打分 + <code>reason</code>。</p>
+</blockquote>
+<p>TextGrad 不是某个任务的 trick，而是一套通用 autograd 框架。论文在多个领域验证了同一套 API：</p>
+<table>
+<thead>
+<tr>
+<th>任务</th>
+<th>基线</th>
+<th>TextGrad 后</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GPQA（PhD 级科学问答）</td>
+<td>GPT-4o 51%</td>
+<td><strong>55%</strong></td>
+<td>零样本 SOTA</td>
+</tr>
+<tr>
+<td>LeetCode-Hard 代码题</td>
+<td>26% 通过率</td>
+<td><strong>36%</strong></td>
+<td>相对 +38%</td>
+</tr>
+<tr>
+<td>GSM8k 数学推理</td>
+<td>GPT-3.5 72.9%</td>
+<td><strong>81.1%</strong></td>
+<td>Prompt 优化典型场景</td>
+</tr>
+<tr>
+<td>分子设计</td>
+<td>—</td>
+<td>58 个药靶全部改善</td>
+<td>同一框架优化 SMILES 字符串</td>
+</tr>
+<tr>
+<td>放疗剂量规划</td>
+<td>临床基线</td>
+<td>5 轮内匹配/超越</td>
+<td>优化外层超参数</td>
+</tr>
+</tbody>
+</table>
+<p>GSM8k 上优化后的 prompt 不是更花哨的咒语，而是显式列出「Restate → Break down → Verify」等认知步骤——RAG Agent 同理：不应把测试集答案枚举进 Prompt，而应把「怎么引用 KB、怎么防幻觉、怎么处理入参」等方法论写进去。</p>
+<h3 id="32-框架全景六步工程闭环">3.2 框架全景：六步工程闭环</h3>
+<blockquote class="article-quote">
+<p>把 TextGrad 抽象，落成一条可重复执行的工程流水线。</p>
+</blockquote>
+<figure class="article-figure"><img src="assets/km-agent-textgrad/project-closed-loop.png" alt="完整项目闭环" loading="lazy" /><figcaption>图6 ·  完整项目闭环（End-to-End Agent Tuning Pipeline）</figcaption></figure>
+<h4 id="321-六步闭环详解">3.2.1 六步闭环详解</h4>
+<table>
+<thead>
+<tr>
+<th>步骤</th>
+<th>环节</th>
+<th>做什么</th>
+<th>TextGrad 对应</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>①</strong></td>
+<td><strong>Agent 编排</strong></td>
+<td>配置 Agentflow：意图识别 → Query 改写 → RAG → LLM 生成；Prompt 与 KB 为<strong>可优化变量</strong></td>
+<td>Variable</td>
+</tr>
+<tr>
+<td><strong>②</strong></td>
+<td><strong>评测 Forward</strong></td>
+<td>评测 Harness 对测试集并发跑题</td>
+<td>Forward Pass</td>
+</tr>
+<tr>
+<td><strong>③</strong></td>
+<td><strong>采集中间态</strong></td>
+<td>收集<code>answer</code>、<code>knowledge_content</code>（RAG 召回）、<code>refined_query</code>（改写结果）</td>
+<td>计算图中间节点</td>
+</tr>
+<tr>
+<td><strong>④</strong></td>
+<td><strong>评分 Loss</strong></td>
+<td>Judge LLM 对 (question, answer) 打分 + 输出 reason</td>
+<td>Loss / Evaluation</td>
+</tr>
+<tr>
+<td><strong>⑤</strong></td>
+<td><strong>归因 &amp; 优化</strong></td>
+<td>Backward 写 gradient；Optimizer 读 Momentum 写 patch</td>
+<td>Backward + TGD.step</td>
+</tr>
+<tr>
+<td><strong>⑥</strong></td>
+<td><strong>发布 &amp; 回归</strong></td>
+<td>上传新版 Prompt/KB，进入下一轮 iter</td>
+<td>optimizer.step()</td>
+</tr>
+</tbody>
+</table>
+<p><strong>闭环的关键</strong>：步骤 ⑥ 之后回到步骤 ②，但通常只跑 <strong>mini-batch + val 集</strong>，而非每次全量——这是 TextGrad mini-batch + validation gate 的工程化。</p>
+<p>论文把上述热身系统推广到任意复合 AI 系统。对计算图 $G=(V,E)$，每个节点 $v$ 由其前驱变换得到：</p>
+<div class="math-display">$$
+v = f_v\!\big(\text{PredecessorsOf}(v)\big) \quad \forall v \in V \tag{10}
+$$</div>
+
+<p>反向传播时，从所有后继节点收集反馈并聚合（$\bigoplus$ 表示多路反馈的拼接/合并）：</p>
+<div class="math-display">$$
+\frac{\partial L}{\partial v} = \bigoplus_{w \in \text{SuccessorsOf}(v)} \nabla_f\!\left(v, w, \frac{\partial L}{\partial w}\right) \tag{11}
+$$</div>
+
+<p>Eq.(11) 递归执行即 <code>loss.backward()</code>；对任意待优化变量 $v$，更新为：</p>
+<div class="math-display">$$
+v_{\text{new}} = \text{TGD.step}\!\left(v, \frac{\partial L}{\partial v}\right) \tag{12}
+$$</div>
+
+<p>含 $n$ 条边的计算图，每轮优化最多 $n$ 次 LLM 梯度调用。RAG Agent 的 Agentflow（意图识别 → Query 改写 → RAG → 生成）正是这样一张多节点图；步骤 ③ 采集的 <code>refined_query</code>、<code>knowledge_content</code> 对应图上的中间节点，没有它们 Eq.(11) 就无法区分「错在检索还是错在生成」。</p>
+<p>步骤 ④ 的 Loss 在 Prompt Optimization 场景（论文 §3.3，RAG 规则答疑通常属于这一类）形式化为：</p>
+<div class="math-display">$$
+\begin{aligned}
+\text{Answer} &= \text{LLM}(\text{Prompt}, \text{Question}) \\
+\text{Evaluation Metric} &= \text{Evaluator}(\text{Answer}, \text{Ground Truth}) \tag{16}
+\end{aligned}
+$$</div>
+
+<p>Mini-batch 训练循环：对 batch 内各样本算 loss 后求和 <code>tg.sum(losses)</code>，再 <code>total_loss.backward()</code> → <code>optimizer.step()</code>——对应步骤 ②→⑤ 的一轮 iter。</p>
+<h4 id="322-步骤-③-为什么必须收集中间态">3.2.2 步骤 ③ 为什么必须收集「中间态」</h4>
+<p>步骤 ③ 是整个闭环里<strong>最容易被忽略、但最关键</strong>的一环。很多项目只收集 <code>answer</code> 和 <code>score</code>，导致步骤 ⑤ 无法区分：</p>
+<table>
+<thead>
+<tr>
+<th>只收集 answer</th>
+<th>同时收集 knowledge_content + refined_query</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>只能看到「答错了」</td>
+<td>能看到「为什么错」</td>
+</tr>
+<tr>
+<td>归因全靠猜</td>
+<td>能区分 kb_retrieval / kb_content / prompt_method</td>
+</tr>
+<tr>
+<td>容易把业务事实写进 Prompt</td>
+<td>有证据链，改动可追溯</td>
+</tr>
+</tbody>
+</table>
+<p>评测 output 应固定包含 <code>knowledge_content</code> 和 <code>refined_query</code>——它们是归因决策树的<strong>唯一直接证据</strong>。只看 Judge 的 reason、不看 RAG 实际召回，极易错归因。</p>
+<h4 id="323-步骤-⑤-的-momentum历史-diff-防震荡">3.2.3 步骤 ⑤ 的 Momentum：历史 diff 防震荡</h4>
+<p>TextGrad 论文的 Momentum 机制：优化器做 TGD.step 时，不仅看当前 gradient，还看<strong>过去几轮的变量历史</strong>。</p>
+<p>典型落地方式（<code>_momentum.md</code> 只追加、不重写）：</p>
+<pre><code>├── iter_01: 改了 KB §某规则 +2行 → val 净收益 +6 → ACCEPT
+├── iter_02: 改了 Prompt §引用铁律 +1行 → val 净收益 +3 → ACCEPT
+├── iter_03: 删了 iter_01 的内容 → val 净收益 -2 → ROLLBACK  ⚠️ 震荡！
+└── iter_04: Optimizer 读 momentum 后拒绝重复 iter_03 的错误
+</code></pre>
+<p>Optimizer 写 patch 前<strong>强制读最近 N 轮 diff</strong>；若本轮改动与历史形成对称操作（「加了又删」），应自动报警。</p>
+<p>TextGrad 论文验证了 mini-batch 与 Momentum 在文本优化里同样有效。数值侧，batch 内多个 loss 的梯度可以相加：</p>
+<div class="math-display">$$
+\frac{\partial \sum_{i=1}^{N} L_i}{\partial x} = \sum_{i=1}^{N} \frac{\partial L_i}{\partial x} \tag{22}
+$$</div>
+
+<p>TextGrad 侧，<code>tg.sum</code> 把多个 batch loss 的文本梯度拼接后向上传播：</p>
+<div class="math-display">$$
+\frac{\partial\,\text{tg.sum}(L_1,\ldots,L_N)}{\partial x} = \text{tg.sum}\!\left(\frac{\partial L_1}{\partial x}, \ldots, \frac{\partial L_N}{\partial x}\right) \tag{24}
+$$</div>
+
+<p>论文 Prompt Optimization 实验：<strong>batch_size = 3，12 轮迭代</strong>。工程落地时等价于：每轮 mini-batch（若干题）+ val 集 Gate 验收。</p>
+<p>TGD.step 还可注入变量过去几轮的 history——论文在放疗剂量规划里用历史方案–超参配对 ${(P_i,\theta_i)}$ 作为 Momentum 式上下文：</p>
+<div class="math-display">$$
+\theta_{\text{new}} = \text{TGD.step}\!\left(\theta,\; \frac{\partial L}{\partial \theta}\;\middle|\;\{(P_i, \theta_i)\}_{i=1}^{N}\right) \tag{*}
+$$</div>
+
+<p>我们的 <code>_momentum.md</code> 做的是同一件事：跨轮 diff 注入改写阶段，自动检测对称震荡。</p>
+<h4 id="324-4-道人工闸门步骤-⑤⑥-之间">3.2.4 4 道人工闸门（步骤 ⑤→⑥ 之间）</h4>
+<table>
+<thead>
+<tr>
+<th>闸门</th>
+<th>位置</th>
+<th>审什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>⏸ 1</td>
+<td>⑤ Backward 完成后</td>
+<td>归因方向对不对？D 类标注有没有误判？</td>
+</tr>
+<tr>
+<td>⏸ 2</td>
+<td>⑤ Optimizer 完成后</td>
+<td>patch 有没有越线？Prompt 里有没有塞业务数值？</td>
+</tr>
+<tr>
+<td>⏸ 3</td>
+<td>⑥ 上传前</td>
+<td>上传命令和<code>--comment</code> 备注是否准确？</td>
+</tr>
+<tr>
+<td>⏸ 4</td>
+<td>⑥ 发布后 val 回归</td>
+<td>加权净收益 &gt; 0 且无 2→0 回退？ACCEPT 还是 ROLLBACK？</td>
+</tr>
+</tbody>
+</table>
+<h3 id="33-textgrad-概念-rag-agent-映射">3.3 TextGrad 概念 → RAG Agent 映射</h3>
+<p>把 TextGrad 映射到 RAG Agent 调优，我们得到如下框架：</p>
+<table>
+<thead>
+<tr>
+<th>TextGrad 概念</th>
+<th>Agent 调优对应物</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Variable（可优化变量）</td>
+<td><strong>Prompt</strong> + <strong>知识库（KB）</strong></td>
+</tr>
+<tr>
+<td>Forward Pass</td>
+<td>Agent 跑评测题 → 产出 answer</td>
+</tr>
+<tr>
+<td>Loss / Evaluation</td>
+<td>Judge LLM 打分 + reason</td>
+</tr>
+<tr>
+<td>Textual Gradient</td>
+<td>结构化归因报告（<code>gradient_text</code>）</td>
+</tr>
+<tr>
+<td>TGD.step</td>
+<td>改写 Prompt / KB 的 patch 方案</td>
+</tr>
+<tr>
+<td>Mini-batch</td>
+<td>每轮只抽 3~8 题算梯度</td>
+</tr>
+<tr>
+<td>Validation Gate</td>
+<td>val 集加权净收益 &gt; 0 才 ACCEPT</td>
+</tr>
+<tr>
+<td>Momentum</td>
+<td>跨轮历史注入，防震荡</td>
+</tr>
+<tr>
+<td>Human Gateway</td>
+<td><strong>4 道人工闸门</strong>（我们的增量）</td>
+</tr>
+</tbody>
+</table>
+<figure class="article-figure"><img src="assets/km-agent-textgrad/textgrad-optimization-loop.svg" alt="TextGrad 优化循环" loading="lazy" /><figcaption>图2 ·  TextGrad 抽象 → 项目实现的映射</figcaption></figure>
+<p>抽象层面的一轮循环：</p>
+<pre><code>选 batch → Forward（跑题）→ Loss（评分）→ Backward（归因写 gradient）
+  → Optimizer（写 patch + momentum）→ 上传 → val Gate（ACCEPT / ROLLBACK）
+</code></pre>
+<p>具体落地成怎样的工程闭环，见 <strong>§3.2</strong>的六步流水线（图6）。</p>
+<p><strong>4 道人工闸门</strong>（审归因 / 审改动 / 授权发布 / 回归决策）不是妥协，而是<strong>高风险线上场景</strong>的必要设计——TextGrad 是全自动化框架，我们借鉴它的<strong>产物结构和数学纪律</strong>，不借鉴它的<strong>自动化程度</strong>。</p>
+<h3 id="34-相对-textgrad-论文的三项增量">3.4 相对 TextGrad 论文的三项增量</h3>
+<table>
+<thead>
+<tr>
+<th>增量</th>
+<th>论文</th>
+<th>本框架</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>双变量</strong></td>
+<td>通常单变量（prompt / 代码 / 分子）</td>
+<td>Prompt + KB 联合优化</td>
+</tr>
+<tr>
+<td><strong>归因决策树</strong></td>
+<td>无</td>
+<td>五选一<code>attribution_type</code></td>
+</tr>
+<tr>
+<td><strong>人机协作</strong></td>
+<td>全自动 TGD.step</td>
+<td><strong>4 道人工闸门</strong> + Momentum 防震荡</td>
+</tr>
+</tbody>
+</table>
+<p>论文还在代码优化（Eq.13）、Solution Refinement（Eq.15）、分子 SMILES（Eq.17–18）等任务上复用同一套 Eq.(10–12) 反向传播——RAG Agent 走的是 Prompt Optimization（Eq.16），autograd 逻辑相同，差别在于我们多了「先选变量再 TGD.step」这一步。</p>
+<p>归因决策树、Validation Gate、Skill 设计见 <strong>§四</strong>；完整业务落地见 <strong>§五</strong>。</p>
+<hr />
+<h2 id="四具体方案介绍">四、具体方案介绍</h2>
+<blockquote class="article-quote">
+<p>本章回答：<strong>badcase 怎么归因？改动怎么验收？Skill 怎么组织？</strong> TextGrad 的公式体系已融入 <strong>§3.1–§3.2</strong>（Forward / Backward / TGD / mini-batch / Momentum），此处聚焦 RAG Agent 特有的工程落地。</p>
+</blockquote>
+<h3 id="41-prompt-vs-kb-归因决策树">4.1 Prompt vs KB 归因决策树</h3>
+<h4 id="双变量问题改错了代价极高">双变量问题：改错了代价极高</h4>
+<p>TextGrad 的 Variable 通常是单一类型（一个 prompt、一段代码）。但 RAG Agent 有<strong>两种异构的可优化变量</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>变量</th>
+<th>管什么</th>
+<th>载体</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Prompt</strong></td>
+<td>怎么答：方法论、引用要求、结构、口吻、禁忌</td>
+<td>Agent 配置文件 / system prompt</td>
+</tr>
+<tr>
+<td><strong>KB</strong></td>
+<td>答什么：业务规则、字段、流程、阈值</td>
+<td>知识库文档</td>
+</tr>
+</tbody>
+</table>
+<p><strong>一个 badcase 来了，到底该改哪一个？</strong> 这是 TextGrad 不回答、却是真实调优中最关键的决策。论文里 Eq.(12) 的 <code>TGD.step</code> 一次只更新一个变量 $v$；RAG Agent 要先通过归因树选定 $v \in {\text{Prompt}, \text{KB}}$，再执行改写。</p>
+<p>判错方向的典型后果：</p>
+<table>
+<thead>
+<tr>
+<th>错误做法</th>
+<th>后果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>把业务数值写进 Prompt</td>
+<td>Prompt 膨胀（2k → 8k 字），注意力稀释</td>
+</tr>
+<tr>
+<td>把字段表枚举进 Prompt</td>
+<td>业务规则更新时要改两处，容易不一致</td>
+</tr>
+<tr>
+<td>RAG 没召回却在 Prompt 里补内容</td>
+<td>改了 Prompt 也解决不了检索问题</td>
+</tr>
+<tr>
+<td>只看评分理由不看召回片段</td>
+<td>极易错归因（详见 §5.6 案例）</td>
+</tr>
+</tbody>
+</table>
+<h4 id="归因决策树">归因决策树</h4>
+<p>我们把「该改哪儿」机制化成一棵决策树，每个 badcase 必须走一遍：</p>
+<figure class="article-figure"><img src="assets/km-agent-textgrad/attribution-decision-tree.svg" alt="Badcase 归因决策树" loading="lazy" /><figcaption>图3 ·  Badcase 归因决策树：Prompt vs KB</figcaption></figure>
+<pre><code>case 错了（score &lt; 2）
+  │  必看 refined_query + knowledge_content（RAG 实际召回片段）
+  │
+  ├─ ① 没召回到关键 KB 片段？     → kb_retrieval  → 改 KB（补 chunk/同义词）  ~40%
+  ├─ ② 召回了但 KB 里没这知识？    → kb_content    → 改 KB（新增业务事实）       ~30%
+  ├─ ③ KB 正确但答案没用上？       → prompt_method → 改 Prompt（加引用要求）     ~15%
+  ├─ ④ 事实对但口吻/结构违规？     → prompt_style  → 改 Prompt（加风格约束）     ~10%
+  └─ ⑤ 评分理由模糊？              → d_suspect     → 疑似误判，不动               ~5%
+</code></pre>
+<blockquote class="article-quote">
+<p><strong>关键洞察：真正该改 Prompt 的只有 ③④（~25%），~70% 应落 KB。</strong></p>
+</blockquote>
+<h4 id="四条工程纪律让决策树可执行">四条工程纪律（让决策树可执行）</h4>
+<p>光有决策树不够，我们用硬约束强制落地：</p>
+<ol>
+<li><strong>证据强制</strong>：归因前必须读 <code>knowledge_content</code> 列，<code>attribution_evidence</code> 必须引用 1~3 行原文</li>
+<li><strong>类型一致性</strong>：patch 的 <code>variable_target.type</code> 必须与 <code>attribution_type</code> 一致，跨类即拒收</li>
+<li><strong>比例告警</strong>：prompt 类 gradient &gt; 50% 时自动报警，提示「可能在用 Prompt 枚举 KB 应承载的业务事实」</li>
+<li><strong>Prompt 内容禁令</strong>：prompt patch 严禁出现具体业务数值 / 字段表 / 单题硬编码</li>
+</ol>
+<h4 id="prompt-与-kb-分工铁律">Prompt 与 KB 分工铁律</h4>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>Prompt</th>
+<th>KB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>本质</td>
+<td>答题方法论</td>
+<td>答题素材库</td>
+</tr>
+<tr>
+<td>内容</td>
+<td>通用思考方式 / 引用要求 / 禁忌</td>
+<td>业务规则、字段定义、流程说明</td>
+</tr>
+<tr>
+<td>变更频率</td>
+<td>季度级</td>
+<td>周级</td>
+</tr>
+<tr>
+<td>修复占比</td>
+<td>~25%</td>
+<td>~70%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>反例</strong>：在 Prompt 里写具体业务数值 ❌ → 应在 KB 对应段落写事实，Prompt 只写「必须引用知识库 §X」✅</p>
+<h4 id="归因走查流程抽象">归因走查流程（抽象）</h4>
+<p>对每个 badcase，标准流程为四步：</p>
+<ol>
+<li><strong>收集证据</strong>：<code>question</code> + <code>refined_query</code> + <code>knowledge_content</code> + <code>answer</code> + Judge 打分与 reason</li>
+<li><strong>走决策树</strong>：五选一 <code>attribution_type</code>，必须引用召回片段原文作为 <code>attribution_evidence</code></li>
+<li><strong>Backward 写 gradient</strong>：只描述问题与改进方向，<strong>禁止</strong>写新 Prompt/KB 文本（对应 Eq.(6) 的 $\partial L / \partial x$）</li>
+<li><strong>Optimizer 写 patch</strong>：<code>variable_target</code> 必须与归因类型一致，输出 <code>&lt;IMPROVED_VARIABLE&gt;</code> 块（对应 Eq.(9) 的 <code>TGD.step</code>）</li>
+</ol>
+<blockquote class="article-quote">
+<p>完整业务 case 走查（含字段映射、金额混淆、正确/错误 patch 对比）见 <strong>§5.6</strong>。</p>
+</blockquote>
+<h3 id="42-工程纪律与-validation-gate">4.2 工程纪律与 Validation Gate</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>机制</th>
+<th>来源</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Mini-batch</strong></td>
+<td>TextGrad §3.3 / Eq.(22)(24)</td>
+<td>每轮只改一类问题（按主题大类分桶），避免多类改动互相干扰</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>train / val / test 三分集</strong></td>
+<td>TextGrad §3.3</td>
+<td>固定划分，val 独立验收，test 冻结到最后</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Momentum</strong></td>
+<td>TextGrad §2 / §3.2.3</td>
+<td>跨轮历史<code>_momentum.md</code> 注入改写阶段，自动检测对称震荡</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Validation Gate + 噪声抑制</strong></td>
+<td>TextGrad + 我们的教训</td>
+<td>val 跑 N≥3 次取众数，单次 ±5 净收益几乎全是 LLM 噪声</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>4 道人工闸门</strong></td>
+<td>我们的增量</td>
+<td>审归因 / 审改动 / 授权上传 / ACCEPT-ROLLBACK</td>
+</tr>
+</tbody>
+</table>
+<p><strong>不照搬 TextGrad 的部分</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>TextGrad 元素</th>
+<th>为什么不抄</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>全自动发布新 prompt</td>
+<td>线上发布是破坏性操作，需人工授权</td>
+</tr>
+<tr>
+<td>LLM 自动评分替代人</td>
+<td>Judge 有噪声，关键决策必须人审</td>
+</tr>
+<tr>
+<td>多轮无人值守迭代</td>
+<td>高风险场景每轮需人拍板</td>
+</tr>
+</tbody>
+</table>
+<h4 id="validation-gate-怎么算净收益">Validation Gate 怎么算「净收益」</h4>
+<p>TextGrad 论文每轮 <code>TGD.step</code>（Eq.12）后，用 val 集判断这步更新是否保留——等价于深度学习里「只在验证集变好时才 checkpoint」。我们的落地公式：</p>
+<pre><code>加权净收益 = Σ(新版本_score - 旧版本_score)   # 对 val 集每题
+           （剔除 frozen_judge_set 中的 D 类误判题）
+
+per-case 变化权重：
+  0→2  翻盘      +2
+  0→1 / 1→2 部分修复  +1
+  无变化           0
+  1→0 / 2→1 部分回退  -1
+  2→0  大回退（重点关注） -2
+</code></pre>
+<p><strong>决策规则</strong>：</p>
+<ul>
+<li>净收益 &gt; 0 <strong>且</strong> 无 2→0 大回退 → 建议 <strong>ACCEPT</strong></li>
+<li>净收益 ≤ 0 <strong>或</strong> 出现 2→0 → 建议 <strong>ROLLBACK</strong>，用上一轮 <code>04_changes/</code> 重新上传</li>
+</ul>
+<p><strong>噪声抑制</strong>（我们的额外工程）：LLM 评分即使 temperature=0 也有 ±1~2 题波动。因此 iter ≥ 2 起，val 必须跑 <strong>N≥3 次取众数（mode）</strong>，无主导值的题进 unstable 池剔除，否则单次 ±5 的净收益几乎全是噪声。</p>
+<hr />
+<h3 id="43-调优-skill-设计">4.3 调优 Skill 设计</h3>
+<p>Skill 的典型目录结构（业务实例见 <strong>§5.1</strong>）：</p>
+<pre><code>your-agent-evaluator-textgrad/
+├── SKILL.md                 ⭐ AI 入口（触发词 + 行为约束）
+├── prompts/                 三角色 prompt（Orchestrator / Backward / Optimizer）
+├── workflows/               SOP 分册（归因 / 优化 / 验收 / 回滚）
+├── constraints/             硬红线 + 人工闸门解释
+├── templates/               产物模板（diagnosis / plan / validation）
+├── scripts/                 评测 / textgrad / upload
+├── assets/                  基线资产（只读：题库 / prompt / kb / 评分标准）
+├── config/                  凭证 + dataset_split + frozen_judge_set
+└── runtime/                 迭代产物（_momentum.md + iter_NN/）
+</code></pre>
+<p><strong>设计原则</strong>：<code>assets/</code> 下的基线文件<strong>永远不改</strong>——所有改动另存到 <code>runtime/iter_NN/04_changes/</code>，保证可回滚。</p>
+<hr />
+<h4 id="431-三角色分工">4.3.1 三角色分工</h4>
+<p>TextGrad 论文里 Backward Engine 和 TGD Optimizer 是<strong>两个不同的 LLM 调用</strong>——分别实现 Eq.(6) 的梯度生成与 Eq.(9) 的变量更新。实践中通常让 Agent <strong>加载不同 prompt 文件切换角色</strong>（业务实例见 <strong>§5.5</strong>）：</p>
+<table>
+<thead>
+<tr>
+<th>角色</th>
+<th>prompt 文件</th>
+<th>输入</th>
+<th>输出</th>
+<th>禁止</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Orchestrator</strong></td>
+<td><code>prompts/orchestrator.md</code></td>
+<td>split + momentum + batch 规则</td>
+<td>编排指令、净收益报告</td>
+<td>替用户做决策</td>
+</tr>
+<tr>
+<td><strong>Backward Engine</strong></td>
+<td><code>prompts/backward_engine.md</code></td>
+<td>answer + reason + knowledge_content</td>
+<td><code>01_diagnosis.md</code>（gradient）</td>
+<td>写新 prompt/kb 文本</td>
+</tr>
+<tr>
+<td><strong>Optimizer</strong></td>
+<td><code>prompts/optimizer.md</code></td>
+<td>gradient + momentum + 当前 prompt/kb</td>
+<td><code>02_plan.md</code>（patch）</td>
+<td>跳过 gradient 直接改</td>
+</tr>
+</tbody>
+</table>
+<p>Workflow 文件（<code>workflows/15_attribution.md</code> 等）是各角色的<strong>操作手册</strong>，确保每次迭代的产物格式一致。</p>
+<hr />
+<h3 id="44-常见问题-faq">4.4 常见问题 FAQ</h3>
+<p><strong>Q1：一定要读 TextGrad 论文才能用这套方法吗？</strong></p>
+<p>不需要。本文 <strong>§三、§四</strong> 已提取论文核心思想（forward/backward/step + mini-batch + momentum）。论文的价值在于提供「数学纪律」——知道<strong>为什么</strong>要小步走、为什么要看历史、为什么要分离 Backward 和 Optimizer。</p>
+<p><strong>Q2：测试集要多大？会不会过拟合？</strong></p>
+<p>封闭域 RAG Agent（规则答疑、政策解读等）通常需要 <strong>数百题</strong> 量级才能覆盖主要主题。防过拟合靠三点：train/val/test 三分集、val gate 验收、Prompt 禁止枚举业务事实。test 集全程冻结，最终报告才用。</p>
+<p><strong>Q3：Judge LLM 评分不准怎么办？</strong></p>
+<p>三点：① 设 <code>d_suspect</code> 类标记疑似误判；② 纳入 <code>frozen_judge_set</code> 从 val 计算中剔除；③ 关键决策（ACCEPT/ROLLBACK）必须人审，不盲信单次评分。</p>
+<p><strong>Q4：每轮迭代能再快吗？</strong></p>
+<p>mini-batch 模式通常比「全量评测 + 大改」更快、更稳。加速方向：缩小 batch、并行跑 val、自动化发布（但仍保留人工授权闸门）。</p>
+<p><strong>Q5：这套方法能用到其他 Agent 吗？</strong></p>
+<p>可以。替换 <code>assets/</code> 下的题库、入参、知识库与 Prompt 基线，更新平台资源 ID，Skill 核心逻辑（归因树 / val gate / momentum）不用动。</p>
+<p><strong>Q6：和 TextGrad 论文最大的差异是什么？</strong></p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>TextGrad 论文</th>
+<th>本框架</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>变量</td>
+<td>单一（prompt 或代码 或分子）</td>
+<td><strong>双变量（Prompt + KB）</strong></td>
+</tr>
+<tr>
+<td>归因</td>
+<td>无</td>
+<td><strong>五选一归因决策树</strong></td>
+</tr>
+<tr>
+<td>自动化</td>
+<td>全自动 TGD.step</td>
+<td><strong>4 道人工闸门</strong></td>
+</tr>
+<tr>
+<td>发布</td>
+<td>直接写新 prompt</td>
+<td>平台 import + publish + comment</td>
+</tr>
+<tr>
+<td>Momentum</td>
+<td>可选</td>
+<td><strong>强制读 _momentum.md + 震荡检测</strong></td>
+</tr>
+</tbody>
+</table>
+<p>业务侧效果数据与简历数字口径见 <strong>§5.3</strong>。</p>
+<hr />
+<h2 id="五实际业务实践">五、实际业务实践</h2>
+<blockquote class="article-quote">
+<p><strong>本章以「分付规则解释助手」为完整案例</strong>——Adams 平台部署的客服 Agent，261 题基线评测，0 分率从 ~25% 降至 ~3.8%。前文 §一~§四 的方法论在此落地。</p>
+</blockquote>
+<p>我负责该项目的 <strong>Agent 调优（主要负责人）</strong>：搭建评测 Harness、分析 badcase、联合优化 Prompt 与 KB，并封装为 <code>fenfu-rule-evaluator-textgrad/</code> Skill。</p>
+<h3 id="51-系统架构">5.1 系统架构</h3>
+<p>分付 Agent 是一个典型的 <strong>Compound AI System</strong>——对应闭环步骤 ① 的 Adams 编排：</p>
+<figure class="article-figure"><img src="assets/km-agent-textgrad/agent-architecture.svg" alt="分付 Agent 架构" loading="lazy" /><figcaption>图4 ·  分付规则解释助手 Agent 架构</figcaption></figure>
+<pre><code>用户问题 → 意图识别（code 节点，不可改）
+         → Query 改写（refined_query）        ← 步骤③采集
+         → 知识库 RAG 召回（knowledge_content）← 步骤③采集
+         → LLM 生成答案（system_prompt 约束）
+         → 输出 answer                          ← 步骤③采集
+</code></pre>
+<p>两个虚线框标注的「Optimizable Variable」——Prompt 和 KB——正是 §4.1 归因决策树要区分的对象。</p>
+<h3 id="52-评测-harness-与-261-题基线">5.2 评测 Harness 与 261 题基线</h3>
+<p>评测体系：261 题基线</p>
+<p>没有可靠评测，整套 TextGrad 循环跑不起来。我们搭建的 <strong>评测 Harness</strong>（本地脚本流水线，<code>run_evaluation.py</code> + Adams API + Venus Gemini）：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>题库</strong></td>
+<td>261 题，人工客服真实问题提炼，覆盖利息/罚息/还款/额度/征信等 10+ 主题</td>
+</tr>
+<tr>
+<td><strong>Case 入参</strong></td>
+<td>每题绑定<code>case_id</code> + 结构化账单字段（<code>bill_amount</code>、<code>unpay_capital</code> 等）</td>
+</tr>
+<tr>
+<td><strong>Forward</strong></td>
+<td>Adams 平台并发答题（~18 min）</td>
+</tr>
+<tr>
+<td><strong>Loss</strong></td>
+<td>Venus Gemini 自动评分 0/1/2 +<code>gemini_reason</code>（~4 min）</td>
+</tr>
+<tr>
+<td><strong>总耗时</strong></td>
+<td>全量 261 题约<strong>22 分钟</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>v0 基线成绩</strong>（2026-04-20，TextGrad 自动化调优的正式起点）：</p>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>总题数</td>
+<td>261</td>
+</tr>
+<tr>
+<td><strong>平均分</strong></td>
+<td><strong>1.70</strong></td>
+</tr>
+<tr>
+<td>2 分</td>
+<td>214 (82.0%)</td>
+</tr>
+<tr>
+<td>1 分</td>
+<td>17 (6.5%)</td>
+</tr>
+<tr>
+<td><strong>0 分</strong></td>
+<td><strong>30 (11.5%)</strong></td>
+</tr>
+</tbody>
+</table>
+<blockquote class="article-quote">
+<p><strong>口径说明</strong>：项目历史上出现过多个 0 分率数字（25%、17.24%、11.5%、3.8%），并非矛盾——它们对应不同阶段、不同口径的评测。详见 <strong>§5.3</strong>。</p>
+</blockquote>
+<h3 id="53-项目成果与优化路径">5.3 项目成果与优化路径</h3>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>评测规模</td>
+<td>261 题（train 180 / val 50 / test 30）</td>
+</tr>
+<tr>
+<td>0 分率</td>
+<td>~25%（最差）→ <strong>~3.8%</strong>（稳态）</td>
+</tr>
+<tr>
+<td>溯源率</td>
+<td><strong>100%</strong></td>
+</tr>
+<tr>
+<td>单轮耗时</td>
+<td>人工~2h → Harness + Skill <strong>~20 min</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>简历数字口径</strong>：对外可写「261 题 0 分率 25%→3%」；精确值为 17.24%→3.8%（v0 起点 11.5%）。汇报时需注明题库规模与 Judge 模型（Gemini），避免与 50 题探索集混淆。</p>
+<figure class="article-figure"><img src="assets/km-agent-textgrad/evolution-timeline.svg" alt="调优演进三阶段" loading="lazy" /><figcaption>图5 · 调优演进三阶段</figcaption></figure>
+<h3 id="54-三阶段演进">5.4 三阶段演进</h3>
+<h4 id="阶段一手工-prompt-engineering">阶段一：手工 Prompt Engineering</h4>
+<p><strong>做法</strong>：跑 261 题 → 人工翻 30 条 0 分 → 凭经验改 → 再跑。</p>
+<p><strong>iter_01 归因结果</strong>（30 条 0 分）：</p>
+<table>
+<thead>
+<tr>
+<th>类别</th>
+<th>含义</th>
+<th>数量</th>
+<th>占比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A 知识库缺失</td>
+<td>KB 里根本没有</td>
+<td>11</td>
+<td>37%</td>
+</tr>
+<tr>
+<td>B 检索未命中</td>
+<td>KB 有但没召回</td>
+<td>7</td>
+<td>23%</td>
+</tr>
+<tr>
+<td>C Prompt 问题</td>
+<td>召回了但没用/用错</td>
+<td>11</td>
+<td>37%</td>
+</tr>
+<tr>
+<td>D 评分误判</td>
+<td>Gemini 判错</td>
+<td>1</td>
+<td>3%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>三个系统性发现</strong>：</p>
+<ol>
+<li><strong>金额字段混淆</strong>：<code>revolving_bill_acct_capital=2000</code>（本月账单本金）被误作「总欠款」</li>
+<li><strong>答非所问</strong>：Query 改写丢失用户隐含意图</li>
+<li><strong>编造路径</strong>：知识库没给操作路径时模型「脑补」</li>
+</ol>
+<h4 id="阶段二auto_optimization-skill">阶段二：auto_optimization Skill</h4>
+<p><strong>进步</strong>：五步闭环固化（跑评测 → 归因 → 改文件 → 上传 → 回归），每轮 iter_NN 目录版本化管理。</p>
+<p><strong>真实迭代数据</strong>（261 题全量 Gemini 评分，本地 CSV 可核对）：</p>
+<table>
+<thead>
+<tr>
+<th>版本</th>
+<th>日期</th>
+<th style="text-align: right;">0 分</th>
+<th style="text-align: right;">1 分</th>
+<th style="text-align: right;">2 分</th>
+<th style="text-align: right;">平均分</th>
+<th style="text-align: right;">0 分率</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>早期最差</td>
+<td>04-17</td>
+<td style="text-align: right;">67</td>
+<td style="text-align: right;">11</td>
+<td style="text-align: right;">183</td>
+<td style="text-align: right;">1.45</td>
+<td style="text-align: right;">25.7%</td>
+<td>Qwen3 + 不稳定 RAG</td>
+</tr>
+<tr>
+<td>DeepSeek 替换后</td>
+<td>04-18</td>
+<td style="text-align: right;">31</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">220</td>
+<td style="text-align: right;">1.72</td>
+<td style="text-align: right;">11.9%</td>
+<td>模型单项 -14 条</td>
+</tr>
+<tr>
+<td><strong>v0 基线</strong></td>
+<td><strong>04-20</strong></td>
+<td style="text-align: right;"><strong>30</strong></td>
+<td style="text-align: right;"><strong>17</strong></td>
+<td style="text-align: right;"><strong>214</strong></td>
+<td style="text-align: right;"><strong>1.70</strong></td>
+<td style="text-align: right;"><strong>11.5%</strong></td>
+<td>TextGrad 正式起点</td>
+</tr>
+<tr>
+<td>iter_02 后</td>
+<td>04-21</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">216</td>
+<td style="text-align: right;">1.74</td>
+<td style="text-align: right;">9.2%</td>
+<td>KB 改动有效</td>
+</tr>
+<tr>
+<td>iter_03 后</td>
+<td>04-21</td>
+<td style="text-align: right;">21</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">221</td>
+<td style="text-align: right;">1.77</td>
+<td style="text-align: right;">8.0%</td>
+<td>0 分 ↓ 但 2→0 回退</td>
+</tr>
+<tr>
+<td>iter 过程最优</td>
+<td>04-22~24</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">11~18</td>
+<td style="text-align: right;">225~232</td>
+<td style="text-align: right;">1.79~1.82</td>
+<td style="text-align: right;"><strong>6.9%</strong></td>
+<td>本地留存最优</td>
+</tr>
+<tr>
+<td><strong>最终稳态</strong></td>
+<td><strong>05-08</strong></td>
+<td style="text-align: right;"><strong>~10</strong></td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;">—</td>
+<td style="text-align: right;"><strong>~3.8%</strong></td>
+<td>TextGrad v2 多轮 ACCEPT</td>
+</tr>
+</tbody>
+</table>
+<blockquote class="article-quote">
+<p>04-22 之后部分 iter 产物已清理；<strong>~3.8% / ~10 条</strong> 来自 2026-05-08 前后线上稳态评测（与简历一致），中间过程以上表本地 CSV 为准。</p>
+</blockquote>
+<p><strong>瓶颈</strong>：每轮跑全量 261 题、归因格式不统一、无 Prompt/KB 强制决策树。</p>
+<h4 id="阶段三textgrad-风格调优-skill当前最优版">阶段三：TextGrad 风格调优 Skill（当前最优版）</h4>
+<p>阅读 TextGrad 论文后，整合评测 + 优化为一个 Skill（<code>fenfu-rule-evaluator-textgrad</code>），核心变化：</p>
+<table>
+<thead>
+<tr>
+<th>维度</th>
+<th>阶段二</th>
+<th>阶段三（TextGrad v2，2026-05-08 定稿）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>每轮跑题</td>
+<td>261 全量 (~22 min)</td>
+<td>batch(3~8) + val(50) (~28 min)</td>
+</tr>
+<tr>
+<td>归因</td>
+<td>四象限自由文本</td>
+<td>五选一<code>attribution_type</code> + 强制证据</td>
+</tr>
+<tr>
+<td>角色</td>
+<td>一个 AI 一气呵成</td>
+<td>Backward / Optimizer / Orchestrator 三角色</td>
+</tr>
+<tr>
+<td>验收</td>
+<td>看全量分数</td>
+<td>val gate 加权净收益 &gt; 0 才 ACCEPT</td>
+</tr>
+<tr>
+<td>历史</td>
+<td>人工翻 iter 目录</td>
+<td><code>_momentum.md</code> 自动追加 + 震荡检测</td>
+</tr>
+<tr>
+<td>修改约束</td>
+<td>无硬性分工</td>
+<td>Prompt 只写方法，KB 只写业务事实</td>
+</tr>
+<tr>
+<td>聚焦策略</td>
+<td>一次改多处</td>
+<td>单轮只改 Prompt<strong>或</strong> KB 加一类主题（mini-batch）</td>
+</tr>
+<tr>
+<td>过拟合控制</td>
+<td>无</td>
+<td>train(180) / val(50) / test(30) 永久锁定 split</td>
+</tr>
+</tbody>
+</table>
+<p><strong>v2 相对论文的四项工程化增量</strong>（对应你 2026-05-08 的设计笔记）：</p>
+<ol>
+<li><strong>Momentum</strong>：Optimizer 写方案前强制读 <code>_momentum.md</code> 最近 3 条修改记录</li>
+<li><strong>修改约束</strong>：Prompt 承载方法论，KB 承载业务事实——硬红线 #8</li>
+<li><strong>过拟合路线</strong>：目标不是「batch 全打 2 分」，而是 val 加权净收益 &gt; 0 且无 2→0</li>
+<li><strong>Mini-batch</strong>：每轮只处理一个主题大类的 3~8 题，等价于 SGD 小批量</li>
+</ol>
+<h4 id="iter_01-的-30-条-0-分三类系统性错误">iter_01 的 30 条 0 分：三类系统性错误</h4>
+<p>阶段一虽然「不可复现」，但 iter_01 的诊断报告价值很高——它揭示了<strong>三类跨题目的系统性错误</strong>，后续所有迭代都在修这三类：</p>
+<p><strong>错误类型 1 · 金额字段混淆（6 条，占 20%）</strong></p>
+<p>模型常把 <code>revolving_bill_acct_capital=2000</code>（本月账单本金）误作「总欠款」，真实应为 <code>unpay_capital+unpay_interest=2150</code>。涉及 #28、#32、#45、#82、#84、#94。</p>
+<p>→ 归因：<strong>prompt_method</strong>（KB 有字段定义，模型没用上）
+→ 修复：在 prompt 加字段映射铁律（见 §5.5 走查示例）</p>
+<p><strong>错误类型 2 · 答非所问 / 意图漂移（5 条）</strong></p>
+<p>Query 改写丢失隐含意图（如 #98「我有偿还能力」隐含提额诉求）；#119 问「怎么付款」答成「怎么还款」。</p>
+<p>→ 归因：<strong>prompt_method</strong> 或 <strong>prompt_style</strong>
+→ 修复：改 prompt 要求保留用户原句关键词 + 识别多重意图</p>
+<p><strong>错误类型 3 · 编造路径（5 条）</strong></p>
+<p>知识库没给具体操作路径时模型「脑补」（如 #102 编造「分付首页 &gt; 常见问题 &gt; 关闭」）。</p>
+<p>→ 归因：一半 <strong>kb_content</strong>（KB 缺路径），一半 <strong>prompt_method</strong>（缺防幻觉约束）
+→ 修复：KB 补路径 + Prompt 加「知识库无路径时明确告知无法提供」</p>
+<hr />
+<h3 id="55-一轮迭代怎么跑">5.5 一轮迭代怎么跑</h3>
+<h4 id="两种模式">两种模式</h4>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>触发词</th>
+<th>耗时</th>
+<th>适用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A · 仅评测</strong></td>
+<td>「跑评测」</td>
+<td>~22 min</td>
+<td>看当前 Agent 效果</td>
+</tr>
+<tr>
+<td><strong>B · TextGrad 迭代</strong></td>
+<td>「开始 iter_NN」</td>
+<td>~28 min/轮</td>
+<td>优化 Prompt / KB</td>
+</tr>
+</tbody>
+</table>
+<h4 id="标准时序模式-b">标准时序（模式 B）</h4>
+<pre><code>iter_NN
+├─ Step 0  加载 split + momentum
+├─ Step 1  选 batch（按主题大类分桶，3~8 题）
+├─ Step 2  在 Adams 跑这几题 → 回填答案
+├─ Step 3  Backward: 写 01_diagnosis.md              ⏸ 检查点 1：审归因
+├─ Step 4  Optimizer: 写 02_plan.md                   ⏸ 检查点 2：审改动
+├─ Step 5  上传 KB / yml（必带 --comment）              ⏸ 检查点 3：授权上传
+├─ Step 6  新版跑 val 50 题 → 回填评分
+├─ Step 7  Validation Gate → 03_validation.md          ⏸ 检查点 4：ACCEPT/ROLLBACK
+└─ Step 8  追加 momentum → 下一轮 或 回滚
+</code></pre>
+<h4 id="对话示例">对话示例</h4>
+<pre><code>你: 初始化 textgrad 优化
+AI: 跑 baseline 评测 + 切分 train/val/test → 完成
+
+你: 开始 iter_01
+AI: 选了 3 条 batch（罚息话术类），请在 Adams 跑这 3 题
+
+你: &lt;回填结果&gt;
+AI: 01_diagnosis.md 写好了，请审归因方向
+
+你: 确认
+AI: 02_plan.md 含 2 个 patch，请批准
+
+你: 批准
+AI: 已生成 04_changes/，请审上传命令后回复「同意上传」
+
+你: 同意上传
+AI: 上传完成，请跑 val 50 题
+
+你: &lt;回填 val 结果&gt;
+AI: 加权净收益 +6，建议 ACCEPT
+
+你: ACCEPT
+AI: 已追加 momentum，回复「开始 iter_02」进入下一轮
+</code></pre>
+<h4 id="产物结构">产物结构</h4>
+<pre><code>runtime/iter_NN/
+├── 01_diagnosis.md      ← 结构化 gradient + attribution_type
+├── 02_plan.md           ← IMPROVED_VARIABLE patch 块
+├── 03_validation.md     ← val 净收益报告
+├── 04_changes/          ← 新 kb + 新 yml
+├── _train_results.xlsx
+└── _val_results.xlsx
+</code></pre>
+<h3 id="56-真实案例与踩坑">5.6 真实案例与踩坑</h3>
+<h4 id="归因走查示例32总共欠多少一次性还清">归因走查示例：#32「总共欠多少？一次性还清」</h4>
+<p>以 iter_01 中 <strong>#32</strong> 为例，展示 §4.1 归因决策树如何落地：</p>
+<p><strong>Step 1 · 收集证据</strong></p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>question</td>
+<td>总共欠多少？我想一次性还清</td>
+</tr>
+<tr>
+<td>refined_query</td>
+<td>分付总欠款查询</td>
+</tr>
+<tr>
+<td>knowledge_content</td>
+<td>（召回了 §还款规则 段，含 unpay_capital / unpay_interest 字段说明）</td>
+</tr>
+<tr>
+<td>answer</td>
+<td>「您的总欠款为 2000 元……」</td>
+</tr>
+<tr>
+<td>gemini_score</td>
+<td>0</td>
+</tr>
+<tr>
+<td>gemini_reason</td>
+<td>总欠款应为 unpay_capital+unpay_interest=2150，模型答 2000 错误</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 2 · 走决策树</strong></p>
+<ul>
+<li><code>knowledge_content</code> <strong>已召回</strong>正确字段说明 → 排除 ① kb_retrieval</li>
+<li>KB <strong>里有</strong> unpay_capital / unpay_interest 定义 → 排除 ② kb_content</li>
+<li>模型<strong>没用上</strong> KB 里的字段映射，误用了 <code>revolving_bill_acct_capital=2000</code> → <strong>③ prompt_method</strong></li>
+</ul>
+<p><strong>Step 3 · Backward 产出 gradient</strong></p>
+<pre><code class="language-yaml">gradient_id: G_iter01_032
+attribution_type: prompt_method
+attribution_evidence: |
+  knowledge_content 已含「总欠款 = unpay_capital + unpay_interest」定义
+  但 answer 输出 2000（= revolving_bill_acct_capital），未引用 KB 字段定义
+variable_target:
+  type: yml.system_prompt
+gradient_text: |
+  模型混淆了「本月账单本金」与「总欠款」字段。应在 prompt 加铁律：
+  涉及总欠款时必须使用 unpay_capital + unpay_interest，禁止用 revolving_bill_acct_capital 替代。
+</code></pre>
+<p><strong>Step 4 · Optimizer 产出 patch</strong></p>
+<p>✅ <strong>正确</strong>（只加方法论铁律）：</p>
+<pre><code class="language-xml">&lt;IMPROVED_VARIABLE target=&quot;yml.system_prompt §字段映射铁律&quot;&gt;
+涉及「总欠款」时，必须使用入参 unpay_capital + unpay_interest，禁止用 revolving_bill_acct_capital 代替。
+&lt;/IMPROVED_VARIABLE&gt;
+</code></pre>
+<p>❌ <strong>错误</strong>（在 Prompt 里枚举业务数值）：</p>
+<pre><code class="language-xml">&lt;IMPROVED_VARIABLE target=&quot;yml.system_prompt&quot;&gt;
+总欠款 = 2100 + 50 = 2150。unpay_capital 是总本金……
+&lt;/IMPROVED_VARIABLE&gt;
+</code></pre>
+<p>这类「金额字段混淆」在 iter_01 的 30 条 0 分中占 <strong>6 条（20%）</strong>，合并成 1 个 patch 修掉。</p>
+<h4 id="案例-aiter_03kb-改对了prompt-改坏了">案例 A：iter_03「KB 改对了，Prompt 改坏了」</h4>
+<ul>
+<li><strong>KB 改动</strong>：补「临时额度到期规则」「财付通 vs 分付关系」→ 修好 15 条 0 分题 ✅</li>
+<li><strong>Prompt 改动</strong>：同步塞了大量业务细节 → <strong>打碎 12 条原本 2 分的题</strong> ❌</li>
+<li><strong>教训</strong>：iter_03 应该只补「方法论护栏」（如「必须引用 KB §X」），而不是在 Prompt 里再塞一遍业务数据</li>
+</ul>
+<p>这个案例直接推动了 TextGrad 版 Skill 的 <strong>Backward/Optimizer 分离</strong> + <strong>Prompt 内容禁令</strong>。</p>
+<h4 id="案例-biter_03-字段映射事故20-大回退">案例 B：iter_03 字段映射事故（2→0 大回退）</h4>
+<p>这是项目中最严重的一次<strong>事故级回退</strong>，直接催生了硬红线「python 节点字段映射不可改」：</p>
+<p><strong>发生了什么</strong>：iter_03 在 yml 里追加 prompt 铁律时，不小心把 python 节点的字段映射回退了：</p>
+<pre><code class="language-python"># ✅ iter_01 正确（上游字段 unpay_xxx → prompt 变量 upay_xxx）
+&quot;upay_capital&quot;: data.get(&quot;unpay_capital&quot;),
+&quot;upay_interest&quot;: data.get(&quot;unpay_interest&quot;),
+
+# ❌ iter_03 被改回（取不到值 → None → 模型幻觉）
+&quot;upay_capital&quot;: data.get(&quot;upay_capital&quot;),   # 上游根本没有 upay_capital！
+&quot;upay_interest&quot;: data.get(&quot;upay_interest&quot;),
+</code></pre>
+<p><strong>后果</strong>：<code>upay_capital = None</code>，模型取不到 2100，被迫用 <code>revolving_bill_acct_capital=2000</code> 顶替甚至幻觉出 2800。<strong>21 条 2→0 回退中约 80% 是总欠款类题目</strong>，平均分从 1.766 掉到 1.751。</p>
+<p><strong>教训</strong>：</p>
+<ol>
+<li>改 yml 时<strong>只能动 <code>system_prompt</code> 段</strong>，python 节点的 <code>data.get(...)</code> 映射是 frozen variable</li>
+<li>发布前必须 <strong>diff 整个 yml</strong>，不能只看自己改的那一段</li>
+<li>这类基础设施级回退，比 prompt 措辞问题严重 10 倍——Validation Gate 必须重点关注 2→0</li>
+</ol>
+<h4 id="踩坑-top-8">踩坑 Top 8</h4>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>坑</th>
+<th>正确姿势</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>猜原因，不看召回</td>
+<td>必须先读<code>knowledge_content</code>，区分「没召回」vs「召回了没用」</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Prompt 里塞业务细节</td>
+<td>Prompt 只写「怎么用知识」；业务数据一律留 KB</td>
+</tr>
+<tr>
+<td>3</td>
+<td>上传 yml 忘了发布</td>
+<td>Adams 有草稿/发布版分离，必须 import + publish 两步</td>
+</tr>
+<tr>
+<td>4</td>
+<td>误把 gemini_reason 当事实</td>
+<td>reason 是「线索」不是「事实」，三源交叉验证</td>
+</tr>
+<tr>
+<td>5</td>
+<td>单次 val 误判有效/无效</td>
+<td>val 必须 N≥3 次取众数</td>
+</tr>
+<tr>
+<td>6</td>
+<td>改 yml 时动了 python 字段映射</td>
+<td>只动 system_prompt；映射代码是 frozen variable</td>
+</tr>
+<tr>
+<td>7</td>
+<td>yml 字符串里用未转义英文双引号<code>"</code></td>
+<td>用中文引号「」或转义<code>\"</code>；改完必须 yaml.safe_load 验证</td>
+</tr>
+<tr>
+<td>8</td>
+<td>上传 yml 只 import 不 publish</td>
+<td>Adams 草稿/发布版分离，必须两步都成功</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="57-题库设计评分标准与硬红线">5.7 题库设计、评分标准与硬红线</h3>
+<p>261 题题库设计：不是随机凑数</p>
+<p>题库从人工客服真实问题提炼，每题标注了<strong>主题大类</strong>和<strong>测试维度</strong>，这是 batch 选题和归因聚类的基础：</p>
+<table>
+<thead>
+<tr>
+<th>主题大类</th>
+<th>典型问题</th>
+<th style="text-align: right;">题量占比（约）</th>
+<th>主要挑战</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>利息计算类</td>
+<td>「利息怎么算」「利率太高」</td>
+<td style="text-align: right;">~25%</td>
+<td>结合入参计算、防口算</td>
+</tr>
+<tr>
+<td>还款规则类</td>
+<td>「还了为什么还有欠款」「提前还清」</td>
+<td style="text-align: right;">~20%</td>
+<td>字段映射、流程说明</td>
+</tr>
+<tr>
+<td>罚息类</td>
+<td>「逾期罚息怎么收」</td>
+<td style="text-align: right;">~8%</td>
+<td>KB 内容完整性</td>
+</tr>
+<tr>
+<td>额度调整类</td>
+<td>「临时额度到期」「提额」</td>
+<td style="text-align: right;">~10%</td>
+<td>KB 缺失 + 意图识别</td>
+</tr>
+<tr>
+<td>误用认知类</td>
+<td>「分付是不是固定期数」</td>
+<td style="text-align: right;">~8%</td>
+<td>纠正用户误解</td>
+</tr>
+<tr>
+<td>查询路径类</td>
+<td>「怎么查历史还款」</td>
+<td style="text-align: right;">~10%</td>
+<td>模型能力边界</td>
+</tr>
+<tr>
+<td>否认纠纷类</td>
+<td>「我没借过怎么要还」</td>
+<td style="text-align: right;">~5%</td>
+<td>口吻 + 事实</td>
+</tr>
+<tr>
+<td>其他</td>
+<td>征信、关闭、协议等</td>
+<td style="text-align: right;">~14%</td>
+<td>混合</td>
+</tr>
+</tbody>
+</table>
+<p>每题还标注了 <code>知识库覆盖内/外</code>、<code>挑战prompt约束力</code>、<code>挑战模型边界</code> 等维度——这意味着优化时不能「只修 KB 覆盖内的题」，覆盖外的题需要 Prompt 加<strong>能力边界声明</strong>（如「我无法查询未来账单」）。</p>
+<p><strong>Case 入参示例</strong>（<code>case_001</code> 月账单场景，261 题共用）：</p>
+<pre><code>bill_amount=235          ← 本月应还
+unpay_amount=235
+revolving_capital=200    ← 本月本金
+revolving_interest=35    ← 本月利息
+revolving_bill_acct_capital=2000  ← 本月账单对应本金（≠总欠款！）
+unpay_capital=2100       ← 总未还本金
+unpay_interest=50        ← 总未还利息
+→ 总欠款 = 2100 + 50 = 2150
+</code></pre>
+<h4 id="评分标准">评分标准</h4>
+<p>Gemini 作为 Loss 函数，按以下标准打分（<code>assets/评分标准_基线版.txt</code>）：</p>
+<table>
+<thead>
+<tr>
+<th>分数</th>
+<th>标准</th>
+<th>典型场景</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>0</strong></td>
+<td>有事实性错误，或完全答非所问</td>
+<td>总欠款答 2000（应为 2150）；编造不存在的操作路径</td>
+</tr>
+<tr>
+<td><strong>1</strong></td>
+<td>可用但不够好：篇幅过长、一次回答太多、主动答用户没问的</td>
+<td>事实对但啰嗦；漏了次要信息</td>
+</tr>
+<tr>
+<td><strong>2</strong></td>
+<td>回答准确、简洁、有逻辑，引用知识库，结合入参</td>
+<td>标准答案</td>
+</tr>
+</tbody>
+</table>
+<p><strong>重要认知</strong>：Gemini reason 是<strong>线索不是事实</strong>。我们专门设了 <code>d_suspect</code> 类和 <code>frozen_judge_set.json</code>，把评分误判题从 val 净收益计算中剔除——否则优化器会跟着 judge 的误差走偏。</p>
+<h4 id="硬红线">硬红线</h4>
+<p>Skill 里固化了 11 条硬红线，违反任一条 = 事故：</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>红线</th>
+<th>为什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>上传 Adams 必须用户授权 +<code>--comment</code></td>
+<td>发布是破坏性操作</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Backward 禁止写新 prompt 文本</td>
+<td>关注点分离</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Optimizer 必须引用 gradient_id</td>
+<td>改动可追溯</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>dataset_split.json</code> 永久锁定</td>
+<td>跨轮分数不可比</td>
+</tr>
+<tr>
+<td>5</td>
+<td>val 集不能反推梯度</td>
+<td>防过拟合</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>_momentum.md</code> 只追加不重写</td>
+<td>防震荡机制</td>
+</tr>
+<tr>
+<td>7</td>
+<td>意图识别 code 节点不可改</td>
+<td>影响全局路由</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Prompt 严禁存业务事实</td>
+<td>防膨胀 + 过拟合</td>
+</tr>
+<tr>
+<td>9</td>
+<td>归因前必须读<code>knowledge_content</code></td>
+<td>两次错归因事故的教训</td>
+</tr>
+<tr>
+<td>10</td>
+<td>val 必须 N≥3 取众数</td>
+<td>消除 LLM 评分噪声</td>
+</tr>
+<tr>
+<td>11</td>
+<td>batch 按主题大类分桶，禁止按 reason 关键词聚类</td>
+<td>reason 高频词是噪声</td>
+</tr>
+</tbody>
+</table>
+<p>此外还有一个<strong>事故级约束</strong>（来自 iter_03 教训）：yml 里 python 节点的字段映射代码（<code>data.get("unpay_xxx")</code> → <code>upay_xxx</code>）是<strong>不可变基线</strong>，改 prompt 时只能动 <code>system_prompt</code> 段，动映射代码会导致 80% 的 2→0 回退。</p>
+<hr />
+<h2 id="总结">总结</h2>
+<blockquote class="article-quote">
+<p><strong>TextGrad 把「用 LLM 优化某个东西」统一成了 forward + backward + step 三件套。本框架在其上补上了 RAG Agent 的关键一环——用归因决策树明确区分「该改 Prompt 还是改知识库」，再用 4 道人工闸门守住线上风险。</strong></p>
+</blockquote>
+<p><strong>可带走的 5 条原则</strong>：</p>
+<ol>
+<li>没有可靠评测，整套循环跑不起来</li>
+<li>先问「该改哪儿」，再问「怎么改」</li>
+<li>业务事实一律落 KB，Prompt 只承载方法论</li>
+<li>小步 batch + val gate + momentum，比一次大改更稳</li>
+<li>人工闸门不是妥协，是高风险场景的必要设计</li>
+</ol>
+<p><strong>相对 TextGrad 论文的 3 个核心增量</strong>：</p>
+<ol>
+<li><strong>双变量归因</strong>：Prompt vs KB 五选一决策树 + 四条工程纪律</li>
+<li><strong>人机协作闭环</strong>：六步工程流水线 + 4 道人工闸门</li>
+<li><strong>可复现产物</strong>：结构化 gradient / patch / momentum / validation，任何接手者都能追溯「为什么这么改」</li>
+</ol>
+<p><strong>案例效果数据</strong>见 <strong>§5.3</strong>（分付规则解释助手：261 题，0 分率 ~25% → ~3.8%，溯源率 100%，单轮 ~2h → ~20 min）。</p>
+<hr />
+<hr />
+<h2 id="附录-a-核心术语速查">附录 A · 核心术语速查</h2>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>含义</th>
+<th>类比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Variable</td>
+<td>待优化对象（Prompt / KB）</td>
+<td>神经网络权重</td>
+</tr>
+<tr>
+<td>Forward Pass</td>
+<td>Agent 跑题产出答案</td>
+<td>前向传播</td>
+</tr>
+<tr>
+<td>Textual Gradient</td>
+<td>一段自然语言反馈</td>
+<td>数值梯度</td>
+</tr>
+<tr>
+<td>Backward Engine</td>
+<td>产生反馈（只评不改）</td>
+<td>反向传播</td>
+</tr>
+<tr>
+<td>TGD</td>
+<td>根据反馈改写变量（只改不评）</td>
+<td>SGD</td>
+</tr>
+<tr>
+<td><strong>Attribution Type</strong></td>
+<td><strong>归因：该改 KB 还是 Prompt</strong></td>
+<td><strong>本框架核心增量</strong></td>
+</tr>
+<tr>
+<td>Validation Gate</td>
+<td>val 净收益 &gt; 0 才接受</td>
+<td>验证集</td>
+</tr>
+<tr>
+<td>Human Gateway</td>
+<td>4 道人工闸门</td>
+<td>本框架核心增量</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="附录-b-图片清单">附录 B · 图片清单</h2>
+<table>
+<thead>
+<tr>
+<th>图号</th>
+<th>文件</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>图1</td>
+<td><code>textgrad_analogy.png</code></td>
+<td>TextGrad 官方 PyTorch 镜像对照（论文 Fig.1）</td>
+</tr>
+<tr>
+<td>图2</td>
+<td><code>02_textgrad_optimization_loop.png</code></td>
+<td>TextGrad 抽象 → 项目实现映射（Forward/Backward/Step）</td>
+</tr>
+<tr>
+<td>图3</td>
+<td><code>03_attribution_decision_tree.png</code></td>
+<td>Prompt vs KB 归因决策树</td>
+</tr>
+<tr>
+<td>图4</td>
+<td><code>01_agent_architecture.png</code></td>
+<td>案例 Agent 编排架构（§5.1）</td>
+</tr>
+<tr>
+<td>图5</td>
+<td><code>04_evolution_timeline.png</code></td>
+<td>三阶段调优演进</td>
+</tr>
+<tr>
+<td><strong>图6</strong></td>
+<td><code>**05_project_closed_loop.png</code>**</td>
+<td><strong>完整六步项目闭环（实战核心）</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="附录-c-公式在正文中的位置eq126">附录 C · 公式在正文中的位置（Eq.1–26）</h2>
+<blockquote class="article-quote">
+<p>来源：arXiv:2406.07496v1。公式已融入正文，不再单独成章；下表仅供检索。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">编号</th>
+<th>内容</th>
+<th>正文位置</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">(1)–(5)</td>
+<td>双 LLM 热身系统、链式文本梯度</td>
+<td><strong>§3.1</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;">(6)</td>
+<td>通用梯度算子$\nabla_{\text{LLM}}$</td>
+<td><strong>§3.1</strong>、§4.1 走查、§4.3.1 Backward</td>
+</tr>
+<tr>
+<td style="text-align: center;">(7)–(9)</td>
+<td>数值 SGD vs TGD.step</td>
+<td><strong>§3.1</strong>、§4.3.1 Optimizer</td>
+</tr>
+<tr>
+<td style="text-align: center;">(10)–(12)</td>
+<td>一般计算图、反向传播、变量更新</td>
+<td><strong>§3.2.1</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;">(13)–(15)</td>
+<td>代码 / Solution 优化目标</td>
+<td><strong>§3.4</strong>（简述）</td>
+</tr>
+<tr>
+<td style="text-align: center;">(16)</td>
+<td>Prompt Optimization（RAG Agent 主场景）</td>
+<td><strong>§3.2.1</strong></td>
+</tr>
+<tr>
+<td style="text-align: center;">(17)–(18)</td>
+<td>分子 SMILES 优化</td>
+<td><strong>§3.4</strong>（简述）</td>
+</tr>
+<tr>
+<td style="text-align: center;">(22)(24)</td>
+<td>batch loss 求和、tg.sum</td>
+<td><strong>§3.2.3</strong>、§4.2</td>
+</tr>
+<tr>
+<td style="text-align: center;">(25)–(26)</td>
+<td>分子综合评分、放疗内层优化</td>
+<td>论文 Appendix F/G（本文未展开）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>参考文献：Yuksekgonul M., Bianchi F., et al. TextGrad: Automatic "Differentiation" via Text. arXiv:2406.07496v1, 2024.</em></p>
+<p><em>项目代码：<code>fenfu-rule-evaluator-textgrad/</code>（调优 Skill）· <code>规则答疑Agent/</code>（目标 Agent）</em></p>
+    </article>
+  </main>
+  <footer><p>© 2026 侯奇瑞 · KM 技术分享网页版</p></footer>
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1639,6 +1639,69 @@ code {
 .project-report code {
   font-family: "SF Mono", Menlo, Consolas, monospace;
 }
+.article-report th,
+.article-report td {
+  white-space: normal;
+  min-width: 5.5rem;
+}
+.article-report pre {
+  margin: 1rem 0;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-alt);
+  font-size: .86rem;
+  line-height: 1.7;
+}
+.article-report pre code {
+  background: transparent;
+  padding: 0;
+}
+.article-report blockquote.article-quote {
+  margin: 1.1rem 0;
+  padding: .9rem 1.1rem;
+  border-left: 4px solid var(--c-blue);
+  border-radius: 0 12px 12px 0;
+  background: var(--bg-alt);
+  color: var(--text);
+}
+.article-report blockquote.article-quote p {
+  margin: 0;
+}
+.article-report blockquote.article-quote p + p {
+  margin-top: .65rem;
+}
+.article-report .article-figure {
+  margin: 1.6rem 0;
+}
+.article-report .article-figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.article-report hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.article-report a {
+  color: var(--c-blue);
+  text-decoration: underline;
+  text-underline-offset: .18em;
+}
+.article-report .math-display {
+  margin: 1.2rem 0;
+  overflow-x: auto;
+}
+.article-report h4 {
+  margin: 1.2rem 0 .45rem;
+  color: var(--c-primary);
+  font-family: var(--report-sans);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
 @media (max-width: 720px) {
   .single-project { width: min(94%, 1040px); }
   .report-header h1,
