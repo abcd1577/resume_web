@@ -12,7 +12,10 @@ import markdown
 
 ROOT = Path(__file__).resolve().parent
 TABULAR_MD = ROOT / "km.md"
-AGENT_MD = Path(__file__).resolve().parents[1] / "02-Agent自动调优/素材/Agent调优方法与思想.md"
+AGENT_MD = (
+    Path(__file__).resolve().parents[1]
+    / "02-Agent自动调优/素材/基于Textgrad的Agent调优思路.md"
+)
 
 TABULAR_IMAGE_NAMES = [
     "image.png",
@@ -29,13 +32,9 @@ TABULAR_IMAGE_NAMES = [
     "image-11.png",
 ]
 
-AGENT_IMAGE_MAP = {
-    "assets/images/textgrad_analogy.png": "assets/km-agent-textgrad/textgrad-analogy.svg",
-    "assets/images/05_project_closed_loop.png": "assets/km-agent-textgrad/project-closed-loop.png",
-    "assets/images/02_textgrad_optimization_loop.png": "assets/km-agent-textgrad/textgrad-optimization-loop.svg",
-    "assets/images/03_attribution_decision_tree.png": "assets/km-agent-textgrad/attribution-decision-tree.svg",
-    "assets/images/01_agent_architecture.png": "assets/km-agent-textgrad/agent-architecture.svg",
-    "assets/images/04_evolution_timeline.png": "assets/km-agent-textgrad/evolution-timeline.svg",
+AGENT_FIGURE_MARKERS = {
+    "manual-tuning": "assets/km-agent-textgrad/manual-tuning-pain-points.png",
+    "closed-loop": "assets/km-agent-textgrad/project-closed-loop.png",
 }
 
 HTML_SHELL = """<!DOCTYPE html>
@@ -127,9 +126,26 @@ def _add_heading_ids(html: str) -> str:
     return re.sub(r"<h([1-6])([^>]*)>(.*?)</h\1>", repl, html, flags=re.S)
 
 
+def _inject_agent_figures(source: str) -> str:
+    pain_points = (
+        "\n\n**图1** 手工试错式调优的四类困境\n\n"
+        f"![手工试错式调优的四类困境]({AGENT_FIGURE_MARKERS['manual-tuning']})\n"
+    )
+    closed_loop = (
+        "\n\n**图2** 端到端 Agent 调优六步闭环\n\n"
+        f"![端到端 Agent 调优六步闭环]({AGENT_FIGURE_MARKERS['closed-loop']})\n"
+    )
+
+    source = source.replace(
+        "**梯度不再是数字，而是一段自然语言反馈**。",
+        "**梯度不再是数字，而是一段自然语言反馈**。" + pain_points,
+        1,
+    )
+    marker = "Agentflow 是多节点计算图。步骤 ③ 采集的"
+    return source.replace(marker, closed_loop + "\n" + marker, 1)
+
+
 def _rewrite_agent_images(html: str) -> str:
-    for old, new in AGENT_IMAGE_MAP.items():
-        html = html.replace(old, new)
     return html
 
 
@@ -293,24 +309,13 @@ def _prepare_tabular_assets() -> None:
 def _prepare_agent_assets() -> None:
     target_dir = ROOT / "assets/km-agent-textgrad"
     target_dir.mkdir(parents=True, exist_ok=True)
+    agent_root = Path(__file__).resolve().parents[1] / "02-Agent自动调优"
 
-    closed_loop_source = (
-        Path(__file__).resolve().parents[1] / "02-Agent自动调优/05_project_closed_loop.png"
+    shutil.copy2(
+        agent_root / "05_project_closed_loop.png",
+        target_dir / "project-closed-loop.png",
     )
-    closed_loop_target = target_dir / "project-closed-loop.png"
-    if closed_loop_source.exists():
-        shutil.copy2(closed_loop_source, closed_loop_target)
-
-    svg_sources = {
-        "textgrad-analogy.svg": ROOT / "assets/km-agent-textgrad/textgrad-analogy.svg",
-        "textgrad-optimization-loop.svg": ROOT / "assets/km-agent-textgrad/textgrad-optimization-loop.svg",
-        "attribution-decision-tree.svg": ROOT / "assets/km-agent-textgrad/attribution-decision-tree.svg",
-        "agent-architecture.svg": ROOT / "assets/km-agent-textgrad/agent-architecture.svg",
-        "evolution-timeline.svg": ROOT / "assets/km-agent-textgrad/evolution-timeline.svg",
-    }
-    for name, path in svg_sources.items():
-        if not path.exists():
-            raise FileNotFoundError(f"Missing agent illustration: {path}")
+    shutil.copy2(agent_root / "image.png", target_dir / "manual-tuning-pain-points.png")
 
 
 def build_tabular_page() -> None:
@@ -335,13 +340,14 @@ def build_agent_page() -> None:
     _prepare_agent_assets()
     source = AGENT_MD.read_text(encoding="utf-8")
     source = _drop_leading_title_heading(source)
+    source = _inject_agent_figures(source)
     body = _postprocess_html(_rewrite_agent_images(_render_markdown(source)))
     html = HTML_SHELL.format(
         title="从手工试错到可回滚闭环：RAG Agent 的 TextGrad 式调优实践",
-        description="基于 TextGrad 范式的 RAG Agent 调优方法论与分付规则解释助手实战。",
+        description="基于 TextGrad 的 Agent 调优思路与分付规则解释助手实战复盘。",
         kicker="腾讯 KM · Agent 调优",
-        heading="借鉴 TextGrad 思想的 RAG Agent 调优方法与实战",
-        summary="从为什么要调优、会遇到什么问题，到 TextGrad 六步闭环、Prompt/KB 归因决策树与人工闸门，最后用分付规则解释助手完整走一遍落地过程。",
+        heading="基于 TextGrad 的 Agent 调优思路",
+        summary="从 Prompt/KB 手工试错的困境出发，梳理 TextGrad 的 Forward–Loss–Backward–Update 框架，以及中间态采集、双变量归因、人工闸门与 Skill 沉淀等工程化改进。",
         body=body,
         footer_note="KM 技术分享网页版",
     )
