@@ -4,7 +4,7 @@ const root = document.documentElement;
 
 const saved = localStorage.getItem('theme');
 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-const initial = saved || (prefersDark ? 'dark' : 'light');
+const initial = root.getAttribute('data-theme') || saved || (prefersDark ? 'dark' : 'light');
 root.setAttribute('data-theme', initial);
 
 if (toggle) {
@@ -17,22 +17,27 @@ if (toggle) {
   });
 }
 
-// 滚动出现动画
+// 滚动出现动画：不隐藏 Hero，避免等 JS 才显示首屏
 const io = new IntersectionObserver((entries) => {
   entries.forEach(e => {
     if (e.isIntersecting) {
-      e.target.style.opacity = 1;
-      e.target.style.transform = 'translateY(0)';
+      e.target.classList.add('is-visible');
+      io.unobserve(e.target);
     }
   });
-}, { threshold: 0.1 });
+}, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
 
-document.querySelectorAll('.section, .hero').forEach(el => {
-  el.style.opacity = 0;
-  el.style.transform = 'translateY(20px)';
-  el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+document.querySelectorAll('.section').forEach(el => {
+  el.classList.add('reveal');
   io.observe(el);
 });
+
+// 兜底：若 IO 异常，2 秒后强制显示，防止内容一直透明
+setTimeout(() => {
+  document.querySelectorAll('.section.reveal:not(.is-visible)').forEach(el => {
+    el.classList.add('is-visible');
+  });
+}, 2000);
 
 // ============================================================
 // 左侧导航：当前区块高亮 + 阅读进度（仅首页存在 #sideNav）

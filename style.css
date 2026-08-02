@@ -56,6 +56,27 @@ a { color: inherit; text-decoration: none; }
 ul { list-style: none; }
 img { max-width: 100%; display: block; }
 
+/* 区块入场：仅在启用 JS 时隐藏非首屏 section，Hero 始终可见 */
+.js .section.reveal:not(.is-visible) {
+  opacity: 0;
+  transform: translateY(18px);
+}
+.js .section.reveal {
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+.js .section.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .js .section.reveal:not(.is-visible),
+  .js .section.reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 /* ============================================================
    导航
    ============================================================ */
