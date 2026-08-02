@@ -8,19 +8,40 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>" />
 </head>
-<body>
-  <!-- 顶部导航 -->
-  <nav class="nav">
-    <a href="#home" class="logo">Qirui Hou.</a>
-    <ul>
-      <li><a href="#about">关于</a></li>
-      <li><a href="#experience">实习</a></li>
-      <li><a href="#research">论文 / 专利</a></li>
-      <li><a href="#projects">项目档案</a></li>
-      <li><a href="#contact">联系</a></li>
-    </ul>
-    <button id="themeToggle" aria-label="切换主题">🌙</button>
-  </nav>
+<body class="has-side-nav">
+  <!-- 移动端抽屉开关 -->
+  <button class="sn-toggle" id="snToggle" aria-label="展开导航" aria-expanded="false" aria-controls="sideNav">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="sn-backdrop" id="snBackdrop" hidden></div>
+
+  <!-- 左侧导航 -->
+  <aside class="side-nav" id="sideNav">
+    <div class="sn-head">
+      <a href="#home" class="logo">Qirui Hou.</a>
+    </div>
+
+    <nav class="sn-nav" aria-label="页面导航">
+      <span class="sn-rail" aria-hidden="true"><span class="sn-rail-fill" id="snRailFill"></span></span>
+      <span class="sn-thumb" id="snThumb" aria-hidden="true"></span>
+      <ul>
+        <li><a class="sn-link" href="#home"><span class="sn-dot"></span><span class="sn-text">首页</span></a></li>
+        <li><a class="sn-link" href="#about"><span class="sn-dot"></span><span class="sn-text">关于</span></a></li>
+        <li><a class="sn-link" href="#experience"><span class="sn-dot"></span><span class="sn-text">实习</span></a></li>
+        <li><a class="sn-link" href="#research"><span class="sn-dot"></span><span class="sn-text">论文 / 专利</span></a></li>
+        <li><a class="sn-link" href="#projects"><span class="sn-dot"></span><span class="sn-text">项目档案</span></a></li>
+        <li><a class="sn-link" href="#contact"><span class="sn-dot"></span><span class="sn-text">联系</span></a></li>
+      </ul>
+    </nav>
+
+    <div class="sn-foot">
+      <div class="sn-progress">
+        <span class="sn-progress-bar"><span class="sn-progress-fill" id="snProgressFill"></span></span>
+        <span class="sn-progress-num" id="snProgressNum">0%</span>
+      </div>
+      <button id="themeToggle" aria-label="切换主题">🌙</button>
+    </div>
+  </aside>
 
   <!-- Hero / 个人简介 -->
   <section id="home" class="hero hero-split">
@@ -140,18 +161,18 @@
           <div class="award-col">
             <h4>国家级 / 学科竞赛</h4>
             <ul>
-              <li>第十五届全国大学生市场调查与分析大赛 <em>一等奖</em></li>
-              <li>第十七届中国大学生计算机设计大赛 <em>二等奖</em></li>
-              <li>第三届大湾区杯 AI for Science 科技竞赛 <em>二等奖</em></li>
-              <li>四川省大学生数学竞赛 <em>二等奖</em></li>
+              <li>第十五届全国大学生市场调查与分析大赛一等奖</li>
+              <li>第十七届中国大学生计算机设计大赛二等奖</li>
+              <li>第三届大湾区杯 AI for Science 科技竞赛二等奖</li>
+              <li>四川省大学生数学竞赛二等奖</li>
             </ul>
           </div>
           <div class="award-col">
             <h4>校级 / 综合荣誉</h4>
             <ul>
-              <li>四川省省级 <em>优秀毕业生</em></li>
-              <li>北京理工大学 <em>一等奖学金</em></li>
-              <li>校级 <em>三好学生</em></li>
+              <li>四川省省级优秀毕业生</li>
+              <li>北京理工大学一等奖学金</li>
+              <li>校级三好学生</li>
             </ul>
           </div>
         </div>
@@ -175,88 +196,98 @@
 
       <ol class="cards stacked">
         <li class="card project-item">
-          <span class="proj-index">01</span>
-          <div class="card-body">
-            <h3>多智能体自动化标签挖掘系统（AgentFlow）</h3>
-            <p class="proj-role">主导建设 · 2026.01 – 至今</p>
-            <p><strong>传统建模：</strong>针对银行征信婚姻字段缺失，设计两阶段级联方案，在 XGBoost 基础上探索 TabPFN，OOT 达 AUC 0.75 / KS 0.37；补齐 9957 万用户婚姻标签，离婚标签 Top 3% 风险识别率为大盘 1.51 倍。</p>
-            <p><strong>Agent 探索：</strong>针对样本依赖重、新场景难复用的问题，搭建 LLM 自动化标签挖掘链路，覆盖特征提取、SQL 生成、逻辑判断和报告生成；引入结构化数据语义化、RAG Few-shot、意图路由、CoT、并行专家和 logprob 置信度量化。</p>
-            <p><strong>微调与蒸馏：</strong>外部版进一步展示专用微调和小模型蒸馏探索：用 Qwen3.5-9B + LoRA/DoRA 做教师，再蒸馏至 Qwen3.5-0.8B + LoRA，学生 OOT 达 AUC 0.71 / KS 0.41，接近教师效果。</p>
-            <p><strong>项目成果：</strong>Agent 侧补回 XGBoost 漏召约 10% 难例，60% 召回下查准率相对 XGBoost 提升 20%（达 43%）；成果沉淀为腾讯 KM 技术好文，并申请发明专利。</p>
-            <div class="tags">
-              <span>Multi-Agent</span><span>LLM</span><span>RAG</span><span>XGBoost</span>
-              <span>TabPFN</span><span>风控建模</span><span>专利申请中</span>
+          <a class="project-card-link" href="project-invoice-taxonomy.html">
+            <span class="proj-index">01</span>
+            <div class="card-body">
+              <h3>大模型驱动的发票用户标签体系构建与业务应用</h3>
+              <p class="proj-role">主要负责人 · 2026.04</p>
+              <p><strong>项目背景：</strong>发票数据信息密度高，但长期难转化为稳定用户画像；传统标签建设人力重、扩展慢，因此探索用 AgentFlow 快速挖掘可解释标签，再归纳为可持续消费的发票标签体系。</p>
+              <p><strong>工作流设计：</strong>搭建 AgentFlow，对陌生或长尾公司按需检索补知识，产出带 evidence 的涌现标签与自然语言 Summary；评测集产出约 2338 种标签，大厂员工金标相对旧模型 Accuracy +10.2pp、Precision +18.7pp。</p>
+              <p><strong>工程提效：</strong>针对约 171 万开通有发票用户，用 prefix cache、搜一搜截断和模型选型，将全量生产由约 10 天压至 2–6 天。</p>
+              <p><strong>项目成果：</strong>针对约 76% 长尾涌现，建立词频统计、映射规则、L1-L3 taxonomy、用户标签长表 / 宽表的归纳链路；进一步用于 HVLR 人群识别，将高净值低风险客群口径落到可解释标签组合，并用风险 Lift 验证业务圈选效果。</p>
+              <div class="tags">
+                <span>标签体系</span><span>标签治理</span><span>AgentFlow</span>
+                <span>HVLR 人群识别</span><span>业务圈选</span>
+              </div>
+              <div class="links"><span class="go-report">查看完整项目报告 →</span></div>
             </div>
-            <div class="links"><a href="project-label-mining.html">查看完整项目报告 →</a></div>
-          </div>
+          </a>
         </li>
 
         <li class="card project-item">
-          <span class="proj-index">02</span>
-          <div class="card-body">
-            <h3>Agent 自动化优化框架（分付规则解释助手）</h3>
-            <p class="proj-role">独立负责</p>
-            <p><strong>项目背景：</strong>针对分付规则答疑 Agent 依赖人工试错、归因不可追溯、改 Prompt / KB 易震荡的问题，引入 TextGrad 文本梯度思想，自研评测、归因、优化和回归闭环。</p>
-            <p><strong>Harness 建设：</strong>搭建 261 题固定基线评测流水线，批量调用 AgentFlow 答题，由统一 Judge 打分，并强制采集 query 改写、召回详情等 RAG 中间态，支持跨轮 diff 和 case 级归因。</p>
-            <p><strong>框架设计：</strong>将 Prompt / KB 视为文本变量，答题为 Forward，Judge 为 Loss；设计 Prompt vs KB 五类归因决策树、Momentum 防震荡、mini-batch 单主题迭代、Validation Gate 和四道人机闸门。</p>
-            <p><strong>项目成果：</strong>四轮调优后 0 分率由手工阶段约 25% 稳态降至约 3.8%，改动溯源率 100%，单轮迭代由人工约 2h 降至约 20min，成果沉淀为 KM 技术分享与可交接 Skill。</p>
-            <div class="tags">
-              <span>TextGrad</span><span>LLM Agent</span><span>Harness 评测</span>
-              <span>Prompt 优化</span><span>自动化迭代</span>
+          <a class="project-card-link" href="project-agent-optimization.html">
+            <span class="proj-index">02</span>
+            <div class="card-body">
+              <h3>基于 Harness 评测框架与 TextGrad 范式的 Agent 自动化优化框架研究与落地</h3>
+              <p class="proj-role">独立负责</p>
+              <p><strong>项目背景：</strong>针对分付规则答疑 Agent 依赖人工试错、归因不可追溯、改 Prompt / KB 易震荡的问题，引入 TextGrad 文本梯度思想，自研评测、归因、优化和回归闭环。</p>
+              <p><strong>Harness 建设：</strong>搭建 261 题固定基线评测流水线，批量调用 AgentFlow 答题，由统一 Judge 打分，并强制采集 query 改写、召回详情等 RAG 中间态，支持跨轮 diff 和 case 级归因。</p>
+              <p><strong>框架设计：</strong>将 Prompt / KB 视为文本变量，答题为 Forward，Judge 为 Loss；设计 Prompt vs KB 五类归因决策树、Momentum 防震荡、mini-batch 单主题迭代、Validation Gate 和四道人机闸门。</p>
+              <p><strong>项目成果：</strong>四轮调优后 0 分率由手工阶段约 25% 稳态降至约 3.8%，改动溯源率 100%，单轮迭代由人工约 2h 降至约 20min，成果沉淀为 KM 技术分享与可交接 Skill。</p>
+              <div class="tags">
+                <span>TextGrad</span><span>LLM Agent</span><span>Harness 评测</span>
+                <span>Prompt 优化</span><span>自动化迭代</span>
+              </div>
+              <div class="links"><span class="go-report">查看完整项目报告 →</span></div>
             </div>
-            <div class="links"><a href="project-agent-optimization.html">查看完整项目报告 →</a></div>
-          </div>
+          </a>
         </li>
 
         <li class="card project-item">
-          <span class="proj-index">03</span>
-          <div class="card-body">
-            <h3>基于因果推断的贷中降额策略与连续干预建模</h3>
-            <p class="proj-role">深度参与</p>
-            <p><strong>项目背景：</strong>针对降额管控后违约率不降反升 3.64% 的“降额摆烂”现象，进行因果效应建模，识别真正适合降额的正向作用人群。</p>
-            <p><strong>离散干预建模：</strong>实验数据采用 Meta-Learner + Bagging 降低预估方差，并用逾期金额归一化重加权对齐业务目标；观测数据采用 DragonNet，通过倾向性预估任务做特征蒸馏，缓解混杂变量影响。</p>
-            <p><strong>连续干预探索：</strong>针对“降多少”的问题引入 VCNet，用样条基函数将网络参数建模为干预强度 t 的动态函数，拟合个体化剂量-响应曲线，为差异化定额提供依据。</p>
-            <p><strong>项目结果：</strong>测试集上 DragonNet 方案使管控客群人均在贷金额降低 3.46%，人均逾期金额降低 13.35%，整体客群金额违约率下降 0.38%。</p>
-            <div class="tags">
-              <span>因果推断</span><span>DragonNet</span><span>VCNet</span>
-              <span>Uplift</span><span>Meta-Learner</span>
+          <a class="project-card-link" href="project-pltv.html">
+            <span class="proj-index">03</span>
+            <div class="card-body">
+              <h3>信贷用户生命周期价值 pLTV 预测与支付长序列表征探索</h3>
+              <p class="proj-role">参与实验探索 · 贷前 / 未开通 / 历史有开通客群</p>
+              <p><strong>项目背景：</strong>信贷 pLTV 需要同时刻画借款意愿与违约风险，两类目标在特征空间存在对抗；金额侧还有零膨胀与长尾问题，传统分模型再相乘容易误差叠加。</p>
+              <p><strong>KaLM Embedding：</strong>将宽表字段写成结构化文本，输入微信通用文本向量模型得到 896 维表征；对照纯 Embedding、特征截断、拼接宽表和 PLS 等方案后，采用“原始特征分类 + KaLM Embedding 回归”的混合两阶段。</p>
+              <p><strong>PZ-Net 方法对齐：</strong>围绕 PLE / CGC 多专家门控、ZILN 零膨胀金额分布和 Sigma Penalty，处理响应与风控负迁移；响应 AUC 达 0.7982，pLTV 总体误差 11.49%，较 MMoE+ZILN 的 15.38% 相对降低约 25%。</p>
+              <p><strong>实验记录：</strong>全量/支用样本误差分别下降 31.8%/28.3%，Top10% 金额误差约降 20.5%；支付长序列表征融合后，响应 AUC 0.7982 → 0.8108，Top10% 响应 39.85% → 41.16%。</p>
+              <div class="tags">
+                <span>pLTV</span><span>KaLM Embedding</span><span>PLE</span>
+                <span>ZILN</span><span>FiLM</span><span>长序列建模</span>
+              </div>
+              <div class="links"><span class="go-report">查看完整项目报告 →</span></div>
             </div>
-            <div class="links"><a href="project-causal-treatment.html">查看完整项目报告 →</a></div>
-          </div>
+          </a>
         </li>
 
         <li class="card project-item">
-          <span class="proj-index">04</span>
-          <div class="card-body">
-            <h3>大模型驱动的发票用户标签体系构建与业务应用</h3>
-            <p class="proj-role">主要负责人 · 2026.04</p>
-            <p><strong>项目背景：</strong>发票数据信息密度高，但长期难转化为稳定用户画像；传统标签建设人力重、扩展慢，因此探索用 AgentFlow 快速挖掘可解释标签，再归纳为可持续消费的发票标签体系。</p>
-            <p><strong>工作流设计：</strong>搭建 AgentFlow，对陌生或长尾公司按需检索补知识，产出带 evidence 的涌现标签与自然语言 Summary；评测集产出约 2338 种标签，大厂员工金标相对旧模型 Accuracy +10.2pp、Precision +18.7pp。</p>
-            <p><strong>工程提效：</strong>针对约 171 万开通有发票用户，用 prefix cache、搜一搜截断和模型选型，将全量生产由约 10 天压至 2–6 天。</p>
-            <p><strong>项目成果：</strong>针对约 76% 长尾涌现，建立词频统计、映射规则、L1-L3 taxonomy、用户标签长表 / 宽表的归纳链路；进一步用于 HVLR 人群识别，将高净值低风险客群口径落到可解释标签组合，并用风险 Lift 验证业务圈选效果。</p>
-            <div class="tags">
-              <span>标签体系</span><span>标签治理</span><span>AgentFlow</span>
-              <span>HVLR 人群识别</span><span>业务圈选</span>
+          <a class="project-card-link" href="project-causal-treatment.html">
+            <span class="proj-index">04</span>
+            <div class="card-body">
+              <h3>基于因果推断的贷中降额策略与连续干预建模</h3>
+              <p class="proj-role">深度参与</p>
+              <p><strong>项目背景：</strong>针对降额管控后违约率不降反升 3.64% 的“降额摆烂”现象，进行因果效应建模，识别真正适合降额的正向作用人群。</p>
+              <p><strong>离散干预建模：</strong>实验数据采用 Meta-Learner + Bagging 降低预估方差，并用逾期金额归一化重加权对齐业务目标；观测数据采用 DragonNet，通过倾向性预估任务做特征蒸馏，缓解混杂变量影响。</p>
+              <p><strong>连续干预探索：</strong>针对“降多少”的问题引入 VCNet，用样条基函数将网络参数建模为干预强度 t 的动态函数，拟合个体化剂量-响应曲线，为差异化定额提供依据。</p>
+              <p><strong>项目结果：</strong>测试集上 DragonNet 方案使管控客群人均在贷金额降低 3.46%，人均逾期金额降低 13.35%，整体客群金额违约率下降 0.38%。</p>
+              <div class="tags">
+                <span>因果推断</span><span>DragonNet</span><span>VCNet</span>
+                <span>Uplift</span><span>Meta-Learner</span>
+              </div>
+              <div class="links"><span class="go-report">查看完整项目报告 →</span></div>
             </div>
-            <div class="links"><a href="project-invoice-taxonomy.html">查看完整项目报告 →</a></div>
-          </div>
+          </a>
         </li>
 
         <li class="card project-item">
-          <span class="proj-index">05</span>
-          <div class="card-body">
-            <h3>信贷用户生命周期价值 pLTV 预测与支付长序列表征探索</h3>
-            <p class="proj-role">参与实验探索 · 贷前 / 未开通 / 历史有开通客群</p>
-            <p><strong>项目背景：</strong>信贷 pLTV 需要同时刻画借款意愿与违约风险，两类目标在特征空间存在对抗；金额侧还有零膨胀与长尾问题，传统分模型再相乘容易误差叠加。</p>
-            <p><strong>KaLM Embedding：</strong>将宽表字段写成结构化文本，输入微信通用文本向量模型得到 896 维表征；对照纯 Embedding、特征截断、拼接宽表和 PLS 等方案后，采用“原始特征分类 + KaLM Embedding 回归”的混合两阶段。</p>
-            <p><strong>PZ-Net 方法对齐：</strong>围绕 PLE / CGC 多专家门控、ZILN 零膨胀金额分布和 Sigma Penalty，处理响应与风控负迁移；响应 AUC 达 0.7982，pLTV 总体误差 11.49%，较 MMoE+ZILN 的 15.38% 相对降低约 25%。</p>
-            <p><strong>实验记录：</strong>全量/支用样本误差分别下降 31.8%/28.3%，Top10% 金额误差约降 20.5%；支付长序列表征融合后，响应 AUC 0.7982 → 0.8108，Top10% 响应 39.85% → 41.16%。</p>
-            <div class="tags">
-              <span>pLTV</span><span>KaLM Embedding</span><span>PLE</span>
-              <span>ZILN</span><span>FiLM</span><span>长序列建模</span>
+          <a class="project-card-link" href="project-label-mining.html">
+            <span class="proj-index">05</span>
+            <div class="card-body">
+              <h3>多智能体自动化标签挖掘系统（AgentFlow）</h3>
+              <p class="proj-role">主导建设 · 2026.01 – 至今</p>
+              <p><strong>传统建模：</strong>针对银行征信婚姻字段缺失，设计两阶段级联方案，在 XGBoost 基础上探索 TabPFN，OOT 达 AUC 0.75 / KS 0.37；补齐 9957 万用户婚姻标签，离婚标签 Top 3% 风险识别率为大盘 1.51 倍。</p>
+              <p><strong>Agent 探索：</strong>针对样本依赖重、新场景难复用的问题，搭建 LLM 自动化标签挖掘链路，覆盖特征提取、SQL 生成、逻辑判断和报告生成；引入结构化数据语义化、RAG Few-shot、意图路由、CoT、并行专家和 logprob 置信度量化。</p>
+              <p><strong>微调与蒸馏：</strong>外部版进一步展示专用微调和小模型蒸馏探索：用 Qwen3.5-9B + LoRA/DoRA 做教师，再蒸馏至 Qwen3.5-0.8B + LoRA，学生 OOT 达 AUC 0.71 / KS 0.41，接近教师效果。</p>
+              <p><strong>项目成果：</strong>Agent 侧补回 XGBoost 漏召约 10% 难例，60% 召回下查准率相对 XGBoost 提升 20%（达 43%）；成果沉淀为腾讯 KM 技术好文，并申请发明专利。</p>
+              <div class="tags">
+                <span>Multi-Agent</span><span>LLM</span><span>RAG</span><span>XGBoost</span>
+                <span>TabPFN</span><span>风控建模</span><span>专利申请中</span>
+              </div>
+              <div class="links"><span class="go-report">查看完整项目报告 →</span></div>
             </div>
-            <div class="links"><a href="project-pltv.html">查看完整项目报告 →</a></div>
-          </div>
+          </a>
         </li>
       </ol>
     </div>
@@ -356,31 +387,7 @@
     <p class="section-intro">每张卡片对应简历中的一个项目：先用 30 秒了解问题、职责与结果；需要追问时，再进入完整的技术档案查看方法、证据和复盘。</p>
     <div class="case-grid">
       <article class="case-card featured">
-        <p class="case-no">01 · 核心项目</p>
-        <h3>自动化标签挖掘：从征信缺失到可解释的百万级打标</h3>
-        <p class="case-summary">面向白名单用户征信缺失问题，构建 XGBoost / TabPFN 与 Multi-Agent 协同的标签挖掘链路，兼顾规模化、冷启动与可解释性。</p>
-        <div class="metric-row"><div><strong>9,957 万</strong><span>补齐标签用户</span></div><div><strong>AUC 0.75</strong><span>OOT 表现</span></div><div><strong>+20%</strong><span>难例查准率</span></div></div>
-        <div class="tags"><span>XGBoost</span><span>TabPFN</span><span>RAG</span><span>Multi-Agent</span></div>
-        <a class="case-link" href="project-label-mining.html">查看完整项目报告 <span>→</span></a>
-      </article>
-      <article class="case-card">
-        <p class="case-no">02 · Agent 工程化</p>
-        <h3>分付规则解释助手的自动化调优框架</h3>
-        <p class="case-summary">将 TextGrad 范式落到 Prompt / KB 双变量调优，建立 Harness 评测、归因决策树、回归与人工闸门闭环。</p>
-        <div class="metric-row"><div><strong>25% → 3%</strong><span>0 分率</span></div><div><strong>2h → 20min</strong><span>单轮耗时</span></div></div>
-        <div class="tags"><span>TextGrad</span><span>Harness</span><span>Human-in-the-loop</span></div>
-        <a class="case-link" href="project-agent-optimization.html">查看完整项目报告 <span>→</span></a>
-      </article>
-      <article class="case-card">
-        <p class="case-no">03 · 因果决策</p>
-        <h3>贷中降额：离散与连续 Treatment 的因果建模</h3>
-        <p class="case-summary">针对“降额不降险”现象，分别回答“是否降额”与“降多少”，以 Uplift 决策替代相关性策略。</p>
-        <div class="metric-row"><div><strong>-13.35%</strong><span>人均逾期金额</span></div><div><strong>-0.38%</strong><span>金额违约率</span></div></div>
-        <div class="tags"><span>DragonNet</span><span>VCNet</span><span>Qini</span></div>
-        <a class="case-link" href="project-causal-treatment.html">查看完整项目报告 <span>→</span></a>
-      </article>
-      <article class="case-card">
-        <p class="case-no">04 · 标签体系</p>
+        <p class="case-no">01 · 标签体系</p>
         <h3>发票用户标签体系构建与业务应用</h3>
         <p class="case-summary">将开放式发票标签归纳为可入库、可圈选的标签体系，并用于 HVLR 人群识别，把高净值低风险客群从标签组合落到业务圈选。</p>
         <div class="metric-row"><div><strong>2,338 类</strong><span>自由标签输入</span></div><div><strong>76%</strong><span>单点长尾待治理</span></div><div><strong>0.14</strong><span>HVLR 7+ Lift</span></div></div>
@@ -388,12 +395,36 @@
         <a class="case-link" href="project-invoice-taxonomy.html">查看完整项目报告 <span>→</span></a>
       </article>
       <article class="case-card">
-        <p class="case-no">05 · 长序列建模</p>
+        <p class="case-no">02 · Agent 工程化</p>
+        <h3>基于 Harness 评测框架与 TextGrad 范式的 Agent 自动化优化框架研究与落地</h3>
+        <p class="case-summary">将 TextGrad 范式落到 Prompt / KB 双变量调优，建立 Harness 评测、归因决策树、回归与人工闸门闭环。</p>
+        <div class="metric-row"><div><strong>25% → 3%</strong><span>0 分率</span></div><div><strong>2h → 20min</strong><span>单轮耗时</span></div></div>
+        <div class="tags"><span>TextGrad</span><span>Harness</span><span>Human-in-the-loop</span></div>
+        <a class="case-link" href="project-agent-optimization.html">查看完整项目报告 <span>→</span></a>
+      </article>
+      <article class="case-card">
+        <p class="case-no">03 · 长序列建模</p>
         <h3>信贷 pLTV 预测与支付长序列表征探索</h3>
         <p class="case-summary">用 KaLM Embedding 增强金额回归，对齐 PZ-Net 多任务结构，并将商业支付长序列表征通过 FiLM 接入 pLTV 建模。</p>
         <div class="metric-row"><div><strong>-31.8%</strong><span>全量误差</span></div><div><strong>-28.3%</strong><span>支用误差</span></div><div><strong>0.8108</strong><span>融合后 AUC</span></div></div>
         <div class="tags"><span>pLTV</span><span>PLE</span><span>ZILN</span><span>FiLM</span></div>
         <a class="case-link" href="project-pltv.html">查看完整项目报告 <span>→</span></a>
+      </article>
+      <article class="case-card">
+        <p class="case-no">04 · 因果决策</p>
+        <h3>贷中降额：离散与连续 Treatment 的因果建模</h3>
+        <p class="case-summary">针对“降额不降险”现象，分别回答“是否降额”与“降多少”，以 Uplift 决策替代相关性策略。</p>
+        <div class="metric-row"><div><strong>-13.35%</strong><span>人均逾期金额</span></div><div><strong>-0.38%</strong><span>金额违约率</span></div></div>
+        <div class="tags"><span>DragonNet</span><span>VCNet</span><span>Qini</span></div>
+        <a class="case-link" href="project-causal-treatment.html">查看完整项目报告 <span>→</span></a>
+      </article>
+      <article class="case-card">
+        <p class="case-no">05 · 标签挖掘</p>
+        <h3>自动化标签挖掘：从征信缺失到可解释的百万级打标</h3>
+        <p class="case-summary">面向白名单用户征信缺失问题，构建 XGBoost / TabPFN 与 Multi-Agent 协同的标签挖掘链路，兼顾规模化、冷启动与可解释性。</p>
+        <div class="metric-row"><div><strong>9,957 万</strong><span>补齐标签用户</span></div><div><strong>AUC 0.75</strong><span>OOT 表现</span></div><div><strong>+20%</strong><span>难例查准率</span></div></div>
+        <div class="tags"><span>XGBoost</span><span>TabPFN</span><span>RAG</span><span>Multi-Agent</span></div>
+        <a class="case-link" href="project-label-mining.html">查看完整项目报告 <span>→</span></a>
       </article>
     </div>
     <p class="evidence-note"><strong>材料说明：</strong>项目档案中的数据、公式、代码与图表均遵循脱敏原则；KM、专利与项目图表只展示可公开或已脱敏材料，后续如补充实验图，会继续按同一口径处理。</p>
