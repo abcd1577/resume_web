@@ -1636,6 +1636,22 @@ code {
   height: auto;
   border-radius: 8px;
 }
+/* report-figure-stack */
+.report-figure-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.report-figure-stack img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+.project-report figure {
+  content-visibility: auto;
+  contain-intrinsic-size: 800px;
+}
+
 .project-report figcaption,
 .report-figure figcaption {
   padding: .75rem .25rem .1rem;

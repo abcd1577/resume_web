@@ -54,7 +54,7 @@
 <h2 id="situation">项目背景｜RAG Agent 调优依赖人工经验，难以复现</h2>
 <p>分付规则解释助手需要引用正确业务规则，结合账单入参给出个性化解释，并控制口吻和篇幅。完整链路是“意图识别 → Query 改写 → KB 召回 → LLM 生成”。早期调优依靠人工跑题、翻 badcase、凭经验改 Prompt / KB，再全量回归。</p>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/agent-manual-tuning-pain-points.webp" alt="人工调优中反复清零、修一坏一和震荡循环的四格示意图">
+  <img decoding="async" src="assets/agent-manual-tuning-pain-points.webp" alt="人工调优中反复清零、修一坏一和震荡循环的四格示意图" width="1080" height="806" fetchpriority="high" loading="eager">
   <figcaption>图 1 · 人工试错式调优的四类困境：全量回归成本、规则膨胀、局部退化和缺少版本归因。</figcaption>
 </figure>
 <p>这种方式最大的问题不是慢，而是无法回答“为什么改、改在哪里、由哪个 case 触发、回归后是否应该保留”。换人之后，很难从最终 Prompt 反推出历史决策。</p>
@@ -66,7 +66,7 @@
 <h2 id="action">技术路径｜借鉴 TextGrad，建立 Harness、归因树和人工闸门</h2>
 <p><strong>第一步是把循环里的 Loss 做可靠。</strong> 我用 261 道真实客服问题构建基线题库，通过 Adams API 并发答题，再由 Gemini 按 0 / 1 / 2 评分。除最终答案外，必须采集 <code>refined_query</code> 与 <code>knowledge_content</code>，否则无法区分检索错误和生成错误。</p>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/agent-harness-dataset.png" alt="261 道规则答疑基线题库的主题和知识库覆盖分布">
+  <img decoding="async" loading="lazy" src="assets/agent-harness-dataset.webp" alt="261 道规则答疑基线题库的主题和知识库覆盖分布" width="1400" height="572">
   <figcaption>图 2 · 261 题基线 Harness 的覆盖结构，由项目原始 CSV 聚合生成。</figcaption>
 </figure>
 <p><strong>第二步是把 TextGrad 思路落到 RAG 场景。</strong> Prompt 和 KB 是文本变量，Adams 生成答案是 Forward，Gemini 评分是 Loss，Backward Engine 输出结构化自然语言梯度，Optimizer 结合历史 Momentum 生成最小 patch。</p>
@@ -75,7 +75,7 @@
 <table><thead><tr><th>归因类型</th><th style="text-align: right;">约占比</th><th>处理方式</th></tr></thead><tbody><tr><td><code>kb_retrieval</code></td><td style="text-align: right;">40%</td><td>补 chunk、标题或同义词</td></tr><tr><td><code>kb_content</code></td><td style="text-align: right;">30%</td><td>补充缺失的业务事实</td></tr><tr><td><code>prompt_method</code></td><td style="text-align: right;">15%</td><td>调整引用方法与回答流程</td></tr><tr><td><code>prompt_style</code></td><td style="text-align: right;">10%</td><td>调整结构和口吻约束</td></tr><tr><td><code>d_suspect</code></td><td style="text-align: right;">5%</td><td>标记 Judge 可疑，暂不修改线上变量</td></tr></tbody></table>
 <p><strong>第四步是用门禁控制风险。</strong> 每轮只选择 3–8 个同主题 case；validation 至少重复 3 次并取众数。只有加权净收益大于 0 且没有 2→0 退化才接受，否则回滚。意图节点、评分 Prompt、字段映射和基线资产进入冻结清单。</p>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/agent-end-to-end-optimization-loop.webp" alt="Agent 自动化调优从编排、评测、归因到人工审批发布的六步闭环">
+  <img decoding="async" loading="lazy" src="assets/agent-end-to-end-optimization-loop.webp" alt="Agent 自动化调优从编排、评测、归因到人工审批发布的六步闭环" width="1400" height="933">
   <figcaption>图 3 · 端到端优化闭环。第 5、6 步之间设置审归因、审改动、授权上传和接受 / 回滚四道人工闸门。</figcaption>
 </figure>
 
