@@ -63,30 +63,30 @@
 <h2 id="action">技术路径｜先开放挖掘，再稳定归纳，最后产品回流</h2>
 <p><strong>第一步：设计标签供给链路。</strong> 上游 AgentFlow 遵循“代码做确定性规则，LLM 做语义判断”。代码负责清洗、派生、白名单、Schema 校验和置信度重打分；LLM-A 决定搜索哪些陌生实体，LLM-B 负责最终打标与 Summary。每条标签统一输出 <code>value</code>、<code>confidence</code> 和引用真实 buyer / seller / item 的 <code>evidence</code>。</p>
 <figure>
-  <img src="assets/invoice-agentflow-technical-design.png" alt="发票标签挖掘 AgentFlow 中代码节点、双大模型、外部搜索与结果校验的技术设计">
+  <img decoding="async" loading="lazy" src="assets/invoice-agentflow-technical-design.webp" alt="发票标签挖掘 AgentFlow 中代码节点、双大模型、外部搜索与结果校验的技术设计">
   <figcaption>图 1 · AgentFlow 技术设计。双 LLM 将“搜什么”和“打什么标签”解耦，代码节点承担可明确编码的规则。</figcaption>
 </figure>
 <p><strong>第二步：构建完整的发票标签体系。</strong> 固定字段、涌现短语与 Summary 进入同义清洗和敏感过滤；长尾短语归入稳定主题；主题组合为人群口径；最终沉淀为用户标签长表 / 宽表，支持入库、圈选、评估和治理，并通过产品评审持续回流。</p>
 <figure>
-  <img src="assets/invoice-taxonomy-delivery-pipeline.png" alt="从大模型发票抽取信号到稳定业务标签体系的构建和交付流程">
+  <img decoding="async" loading="lazy" src="assets/invoice-taxonomy-delivery-pipeline.webp" alt="从大模型发票抽取信号到稳定业务标签体系的构建和交付流程">
   <figcaption>图 2 · 标签归纳体系与交付流程。固定字段保证跨用户可比，开放标签保留丰富度，映射规则和三级体系将其收敛为可消费标签。</figcaption>
 </figure>
 <figure>
-  <img src="assets/invoice-complete-taxonomy.png" alt="完整发票标签体系明细表，包含一级主题、二级标签、三级标签、用户覆盖和风险指标">
+  <img decoding="async" loading="lazy" src="assets/invoice-complete-taxonomy.webp" alt="完整发票标签体系明细表，包含一级主题、二级标签、三级标签、用户覆盖和风险指标">
   <figcaption>图 3 · 完整发票标签体系。开放标签经过归纳后沉淀为 L1-L3 taxonomy，并保留用户覆盖、风险指标和可消费字段。</figcaption>
 </figure>
 <p><strong>第三步：用评测和裁判复核验证方案。</strong> 固定 Schema 约有 20 个枚举字段，单用户通常输出 3–7 个标签且包含较多 unknown；涌现方案输出 2,338 种自由短语，单用户得到 5–10 个有效标签，并能细化到具体职业、会员和生活方式。</p>
 <figure>
-  <img src="assets/invoice-evaluation-workflow.png" alt="发票标签方案从调研、设计、抽样、评测到裁判复核的实验流程">
+  <img decoding="async" loading="lazy" src="assets/invoice-evaluation-workflow.webp" alt="发票标签方案从调研、设计、抽样、评测到裁判复核的实验流程">
   <figcaption>图 4 · 方案评估与裁判复核流程。差异样本经过二次判断，避免只凭少量案例选择方案。</figcaption>
 </figure>
 <p><strong>第四步：工程提效与二次 Agent。</strong> 发票全量生产如果直接按原链路跑，成本和耗时都不可接受。我主要从 prefix cache、搜一搜摘要截断、模型选型和并行度调优几方面压缩成本：针对约 <strong>171 万</strong>开通有发票用户，将全量生产由约 <strong>10 天</strong>压至 <strong>2–6 天</strong>。二次 Agent 则使用阶段一的 <code>buyer_top5</code>、<code>occupation</code> 和原始证据，将开放语义收敛为严格二分类，只对争议样本调用裁判 Agent。</p>
 <figure>
-  <img src="assets/invoice-parallelism-benchmark.png" alt="发票标签批处理并行度从 8 到 512 与端到端耗时的基准测试">
+  <img decoding="async" loading="lazy" src="assets/invoice-parallelism-benchmark.webp" alt="发票标签批处理并行度从 8 到 512 与端到端耗时的基准测试">
   <figcaption>图 5 · 并行度与运行耗时。256 附近是本次环境的最优点，继续增加并发反而变慢。</figcaption>
 </figure>
 <figure>
-  <img src="assets/invoice-secondary-agent-evaluation.png" alt="主 Agent 输出经口径统一 Agent 和裁判 Agent 复核的二阶段评估流程">
+  <img decoding="async" loading="lazy" src="assets/invoice-secondary-agent-evaluation.webp" alt="主 Agent 输出经口径统一 Agent 和裁判 Agent 复核的二阶段评估流程">
   <figcaption>图 6 · 二次 Agent 与裁判 Agent 的复核链路。内部数据表名已脱敏。</figcaption>
 </figure>
 
@@ -94,7 +94,7 @@
 <p>以大厂员工金标为例，Agent Accuracy 为 <strong>0.592</strong>，V4 为 0.490；Agent Precision 为 <strong>0.675</strong>，V4 为 0.488。去除 unknown 后 Accuracy 提升 <strong>12.15 个百分点</strong>；裁判 Agent 在分歧样本中支持新方案的比例为 <strong>99.18%</strong>。</p>
 <p>工程侧 prefix cache 提速约 <strong>21%</strong>，搜索摘要截断提速约 <strong>36%</strong> 且 F1 未下降；切换小模型后，170 万用户推理周期由约 <strong>10 天</strong>压缩到 <strong>2–6 天</strong>。三级体系进一步在九个一级主题上检查覆盖，并对 138 个可评估标签统计 0+ 金额违约 Lift。</p>
 <figure>
-  <img src="assets/invoice-taxonomy-evaluation.png" alt="发票三级标签体系的一级主题覆盖和金额违约 Lift 分布">
+  <img decoding="async" loading="lazy" src="assets/invoice-taxonomy-evaluation.webp" alt="发票三级标签体系的一级主题覆盖和金额违约 Lift 分布">
   <figcaption>图 7 · 标签体系覆盖广度与风险区分度。图中只包含汇总数据，不含用户级明细。</figcaption>
 </figure>
 <p>更具体地看，标签体系不是只留下一个 HVLR 结论，而是把不同来源的发票信号整理成可讨论的标签积木。例如，“商旅达人 / 差旅达人 / 高频商务出行”统一到“商务差旅”；“山姆会员”沉淀为会员与消费偏好标签；“燃油车主 / 新能源车主”归到车辆与出行标签；“腾讯员工 / 大厂互联网员工 / 互联网从业者”则进入职业身份层级，并在需要严格口径时交给二次 Agent 做 0/1 复核。</p>

@@ -61,7 +61,7 @@
 <p><strong>KaLM Embedding 特征增强。</strong> 将宽表字段写成结构化文本，例如“凌晨最大绑卡数量：5，凌晨最大提现金额：565”，输入微信通用文本向量模型 KaLMEmb，得到 896 维稠密表征。实验对照纯 Embedding、特征重要性截断、拼接宽表、分类 / 回归分用不同特征源等方案，并结合 PLS 等有监督降维。结论是 Embedding 更利金额回归，原始特征更利响应排序，因此采用“原始特征分类 + KaLM Embedding 回归”的混合两阶段。</p>
 <p><strong>PZ-Net 方法对齐。</strong> 针对响应-风控负迁移，设计 PLE+CGC 的多专家门控：共享专家提取通用画像，任务独占专家提取借贷 / 风险私有特征，再经门控融合进入多塔。针对金额大量零值与长尾，用 ZILN 预测对数正态参数 μ、σ，并以加权多任务损失 + Sigma Penalty 抑制模型放大 σ“摆烂”。</p>
 <figure>
-  <img src="assets/pltv-film-ple-architecture.png" alt="支付长序列表征通过 FiLM 调制信贷画像并接入 PLE 多塔 pLTV 网络">
+  <img decoding="async" loading="lazy" src="assets/pltv-film-ple-architecture.webp" alt="支付长序列表征通过 FiLM 调制信贷画像并接入 PLE 多塔 pLTV 网络">
   <figcaption>图 1 · FiLM + PLE / CGC 架构示意。支付表征按情境调制信贷画像，再通过多专家门控分配到意愿、金额和风险任务。</figcaption>
 </figure>
 <p><strong>支付表征融合。</strong> 将商业支付长序列表征接入 pLTV，用 FiLM 按支付情境对信贷画像做特征维调制，再经 PLE 门控非对称分配至意愿、金额、风险塔，缓解支付活跃信号对风控塔的负迁移。</p>
@@ -71,7 +71,7 @@
 <p>PZ-Net 方法对齐中，响应 AUC 达 0.7982，pLTV 总体误差 11.49%，较 MMoE+ZILN 的 15.38% 相对降低约 25%。</p>
 <p>支付表征融合后，验证集响应 AUC 由 0.7982 提升至 0.8108（+1.26pp），TOP10% 累计响应占比由 39.85% 提升至 41.16%。这说明支付长序列能为信贷 pLTV 提供额外行为信号，但需要通过 FiLM 与 PLE 门控控制其对意愿、金额和风险任务的不同影响。</p>
 <figure>
-  <img src="assets/pltv-logit-ab.png" alt="支付长序列表征融合前后的响应排序和金额建模对比">
+  <img decoding="async" loading="lazy" src="assets/pltv-logit-ab.png" alt="支付长序列表征融合前后的响应排序和金额建模对比">
   <figcaption>图 2 · 长序列表征融合结果。支付行为序列补充了宽表难以覆盖的跨场景行为信号，在响应排序和金额预测上均带来增益。</figcaption>
 </figure>
 

@@ -67,7 +67,7 @@
 <li><strong>迭代慢</strong>：翻 badcase、改文件、发布、回归，一轮很耗时间</li>
 </ol>
 <p>神经网络早年也经历过类似的「手工调参」阶段，后来反向传播和自动微分（PyTorch [3] 那套）才把优化流程标准化。TextGrad [1] 做的事情，可以理解为把这套思路迁到 LLM 复合系统上：<strong>梯度不再是数字，而是一段自然语言反馈</strong>。</p>
-<figure class="article-figure"><img src="assets/km-agent-textgrad/manual-tuning-pain-points.png" alt="手工试错式调优的四类困境" loading="lazy" /><figcaption>图1 · 手工试错式调优的四类困境</figcaption></figure>
+<figure class="article-figure"><img decoding="async" src="assets/km-agent-textgrad/manual-tuning-pain-points.webp" alt="手工试错式调优的四类困境" loading="lazy" /><figcaption>图1 · 手工试错式调优的四类困境</figcaption></figure>
 <hr />
 <h2 id="二textgrad-整体框架">二、TextGrad 整体框架</h2>
 <p>TextGrad 是斯坦福团队在 Nature 2025 正式发表的通用文本自动优化框架 [1]，预印本见 arXiv:2406.07496 [2]；全称 Automatic "Differentiation" via Text。核心创新是把神经网络数值反向传播的逻辑迁移到大模型文本流水线，用 LLM 输出的自然语言意见作为「文本梯度」，实现整条 Agentflow 链路全组件自动迭代优化。</p>
@@ -259,7 +259,7 @@ $$</div>
 </tr>
 </tbody>
 </table>
-<figure class="article-figure"><img src="assets/km-agent-textgrad/project-closed-loop.png" alt="端到端 Agent 调优六步闭环" loading="lazy" /><figcaption>图2 · 端到端 Agent 调优六步闭环</figcaption></figure>
+<figure class="article-figure"><img decoding="async" src="assets/km-agent-textgrad/project-closed-loop.webp" alt="端到端 Agent 调优六步闭环" loading="lazy" /><figcaption>图2 · 端到端 Agent 调优六步闭环</figcaption></figure>
 <p>Agentflow 是多节点计算图。步骤 ③ 采集的 <code>refined_query</code>、<code>knowledge_content</code> 对应图上的中间节点——没有它们，Backward 无法区分「错在检索还是错在生成」。很多项目只收集 <code>answer</code> 和 <code>score</code>，归因只能靠猜，极易把业务事实写进 Prompt。</p>
 <hr />
 <h2 id="三针对-textgrad-的改进">三、针对 TextGrad 的改进</h2>

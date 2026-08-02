@@ -71,7 +71,7 @@ $$</p>
 <p><strong>第一层：随机实验数据。</strong> 在少量随机实验数据上，Treatment 近似随机分配，可以先假定不存在系统性混杂。这个阶段用 S / T / X-Learner 建立离散干预基线，基础模型为 XGBoost。为了让二分类训练更贴近金额业务目标，违约样本按归一化逾期金额加权，正常样本按归一化在贷金额加权；Bagging 用于降低单模型方差。</p>
 <p><strong>第二层：观测数据与混杂控制。</strong> 信贷业务无法长期、大规模依赖 A/B 实验，现实样本更多来自观测数据。高风险用户更容易被降额，Treatment 和 outcome 同时受额度使用率、还款能力、历史风险等变量影响。基于后门准则，需要控制这些混杂变量，再估计降额对逾期的因果效应。DragonNet 以共享表征 $Z(X)$ 连接倾向性头 $\hat g(X)$、处理组 outcome 头 $\hat Q(1)$ 和对照组 outcome 头 $\hat Q(0)$；倾向性任务迫使共享层保留与 Treatment 选择有关的信息，相当于把“为什么这个人会被降额”的信息蒸馏进表征，再用于 CATE 估计。</p>
 <figure>
-  <img src="assets/causal-dragonnet.png" alt="DragonNet 通过共享表征连接倾向性头与处理组、对照组 outcome 头的网络结构">
+  <img decoding="async" loading="lazy" src="assets/causal-dragonnet.webp" alt="DragonNet 通过共享表征连接倾向性头与处理组、对照组 outcome 头的网络结构">
   <figcaption>图 1 · DragonNet 结构。共享表征同时服务倾向性预测和两组 outcome 预测，用于处理观测数据中的干预选择偏差。</figcaption>
 </figure>
 <p><strong>第三层：连续 Treatment。</strong> 前两层主要回答“是否降额”，但业务还需要回答“降多少”。如果把降额幅度硬切成十档，会损失剂量-响应曲线的连续性。VCNet 让网络参数成为干预强度 $t$ 的函数，以样条基函数表示：</p>
@@ -82,7 +82,7 @@ $$</p>
 $$</p>
 <p>模型由此估计同一用户在不同降额幅度下的反事实违约曲线。连续倾向性 $\pi(t\mid X)$ 在离散网格端点预测后线性插值，以处理 Treatment 分配偏差。</p>
 <figure>
-  <img src="assets/causal-vcnet.png" alt="DRNet 与 VCNet 网络结构对比，VCNet 使用随 treatment 变化的动态参数网络">
+  <img decoding="async" loading="lazy" src="assets/causal-vcnet.webp" alt="DRNet 与 VCNet 网络结构对比，VCNet 使用随 treatment 变化的动态参数网络">
   <figcaption>图 2 · DRNet 与 VCNet 对比。VCNet 不再把连续干预粗暴分桶，而是用随 $t$ 变化的动态参数拟合剂量-响应曲线。</figcaption>
 </figure>
 <p><strong>决策阈值。</strong> 离散干预阶段将 CATE 从低到高排序并分成 100 段，逐段累计计算 $b'/B'$。在收益条件和可管控人数之间取平衡，决策阈值落在约 <strong>31 分位点</strong>。</p>
