@@ -1657,6 +1657,17 @@ code {
   height: auto;
   border-radius: 8px;
 }
+/* 标签体系表：脱敏层级展示，允许标签列换行 */
+.tag-system-figure { margin: 1.5rem 0; }
+.tag-system-table { width: 100%; }
+.tag-system-table th,
+.tag-system-table td {
+  white-space: normal;
+}
+.tag-system-table td:last-child {
+  color: var(--text-soft);
+}
+
 /* report-figure-stack */
 .report-figure-stack {
   display: flex;
