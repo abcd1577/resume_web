@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spec-PINN · 侯奇瑞</title>
+  <meta name="description" content="Physics-informed neural network based on operator-induced manifold embedding for wave propagation and medium inversion." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" as="style" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'" />
+  <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" crossorigin="anonymous" /></noscript>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (!window.renderMathInElement) return;
+      window.renderMathInElement(document.body, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false }
+        ],
+        throwOnError: false
+      });
+    });
+  </script>
+</head>
+<body>
+  <nav class="nav project-nav">
+    <a href="index.html" class="logo">Qirui Hou.</a>
+    <ul>
+      <li><a href="index.html#research">返回论文 / 专利</a></li>
+      <li><a href="index.html#projects">全部项目</a></li>
+    </ul>
+    <button id="themeToggle" aria-label="切换主题">🌙</button>
+  </nav>
+
+  <main class="project-library single-project">
+    <article class="project-report">
+      <header class="report-header">
+        <p class="report-kicker">学术论文 · EAAI · 返修 · 共同一作</p>
+        <h1>Spec-PINN：基于算子诱导流形嵌入的物理信息神经网络</h1>
+        <p class="report-summary">
+          Physics-informed neural network based on operator-induced manifold embedding for wave propagation and medium inversion.
+          面向高频 Helmholtz 方程的正问题波场模拟与介质参数反演，用算子诱导嵌入缓解谱偏差与周期跳跃。
+        </p>
+        <dl class="report-metrics">
+          <div>
+            <dt>正问题波数范围</dt>
+            <dd>$k=5\sim1000$</dd>
+          </div>
+          <div>
+            <dt>极端高频相对 $L_2$</dt>
+            <dd>$\sim10^{-4}$</dd>
+          </div>
+          <div>
+            <dt>非均匀 $k$ 反演误差</dt>
+            <dd>$4.76\%\to0.36\%$</dd>
+          </div>
+        </dl>
+      </header>
+
+      <h2 id="problem">问题｜高频正演难拟合，反演易周期跳跃</h2>
+      <p>
+        频域波动由 Helmholtz 方程描述。波数 $k$ 升高后，波场空间振荡加剧：标准 PINN 受谱偏差影响，优先拟合低频，高频相位易滞后；
+        反演时 $k(\mathbf{x})$ 与 $u(\mathbf{x})$ 以 $k^2 u$ 强耦合，目标非凸，优化器容易匹配错误周期，出现 cycle-skipping。
+      </p>
+      <figure>
+        <img decoding="async" loading="lazy" src="assets/spec-pinn-wavefield-schematic.webp" alt="不同波数下驻波与干涉波解析解示意" width="1400" height="1139">
+        <figcaption>图 1 · 两则基准解随波数升高的振荡加剧。$k$ 增大后梯度复杂度上升，常规 PINN 更容易相位滞后。</figcaption>
+      </figure>
+
+      <h2 id="method">方法｜Spec-PINN：把 Helmholtz 解析性质写入特征层</h2>
+      <p>
+        Spec-PINN 的核心不是在 loss 里再加几项惩罚，而是把算子解析性质做成<strong>首层嵌入（强归纳偏置，而非硬约束）</strong>：
+        正问题用自由空间基本解构造物理核通道，并用源项 FFT 主导模态做谱对齐；
+        逆问题用汉克尔渐近展开构造多尺度字典，配合双网络把非线性波数搜索转成字典权重优化。
+      </p>
+
+      <h3>正问题：物理核通道 + 源项谱通道</h3>
+      <figure>
+        <img decoding="async" loading="lazy" src="assets/spec-pinn-arch-forward.webp" alt="正问题 Spec-PINN 架构：Bessel 特征映射接入 MLP" width="1400" height="631">
+        <figcaption>图 2 · 正问题架构示意。坐标经 Bessel / MFS 物理核特征映射后进入自适应 SiLU MLP；源项谱特征与物理核特征拼接形成复合嵌入。</figcaption>
+      </figure>
+
+      <h3>逆问题：渐近多尺度基双网络</h3>
+      <figure>
+        <img decoding="async" loading="lazy" src="assets/spec-pinn-arch-inverse.webp" alt="逆问题双网络协同反演框架" width="1400" height="881">
+        <figcaption>图 3 · 逆问题框架。状态网络 $N_u$ 与参数网络 $N_k$ 协同；渐近多尺度字典提供物理词汇，TV 与两阶段训练抑制伪影和周期跳跃。</figcaption>
+      </figure>
+
+      <h2 id="forward">正问题结果｜跨三数量级波数保持波形</h2>
+      <p>
+        在驻波与干涉波基准上，Spec-PINN 在 $k\in\{5,10,20,100,1000\}$ 保持稳定重建；
+        高波数下误差场更接近无结构噪声，而不是随频率加剧的污染斑块。
+      </p>
+      <figure>
+        <img decoding="async" loading="lazy" src="assets/spec-pinn-forward-k100.webp" alt="k=100 时 Spec-PINN 预测、真解与绝对误差对比" width="1400" height="379">
+        <figcaption>图 4 · Case A（$k=100$）解对比：预测 / 真解 / 绝对误差。高频振荡峰值仍可对齐。</figcaption>
+      </figure>
+      <figure>
+        <img decoding="async" loading="lazy" src="assets/spec-pinn-slice-k100.webp" alt="y=0.5 切片上预测与真解波形对比" width="1400" height="973">
+        <figcaption>图 5 · $y=0.5$ 切片（$k=100$）。微观波形显示峰谷对齐，未见明显相位滞后。</figcaption>
+      </figure>
+
+      <h2 id="inverse">逆问题结果｜均匀标量识别与非均匀异常体重构</h2>
+      <p>
+        均匀介质标量 $k$ 识别中，引入 PDE 约束后参数可从偏差初值收敛到真值；
+        非均匀异常体场景下，相对 Fourier baseline，Spec-PINN 的波数场误差更低、背景伪影更少。
+      </p>
+      <figure>
+        <img decoding="async" loading="lazy" src="assets/spec-pinn-inverse-scalar.webp" alt="均匀介质标量波数反演收敛与切片对比" width="1400" height="933">
+        <figcaption>图 6 · 均匀介质标量 $k$ 反演：切换 PDE 约束后参数收敛到真值，波场切片相位与频率对齐。</figcaption>
+      </figure>
+      <figure>
+        <img decoding="async" loading="lazy" src="assets/spec-pinn-inverse-compare.webp" alt="非均匀介质波数场与波场重构对比" width="1400" height="777">
+        <figcaption>图 7 · 非均匀介质反演对比。上排 $k$ 场：真值 / Spec-PINN / Fourier baseline；下排对应波场拟合。Spec-PINN 参数误差约 0.36%，baseline 约 4.76%。</figcaption>
+      </figure>
+
+      <h2 id="note">说明</h2>
+      <p>
+        本稿投递 EAAI（稿号 EAAI-26-5364），目前处于<strong>返修</strong>阶段；网站展示图件来自修订稿中的典型结果，表述按公开可答辩口径做了收敛
+        （嵌入为强归纳偏置而非硬约束）。完整方法、表格与补充实验见 PDF。
+      </p>
+      <p class="report-cta">
+        <a class="btn primary" href="Physics-informed neural network based on operator-induced manifold embedding for wave propagation and medium inversion.pdf" target="_blank" rel="noopener">下载论文 PDF</a>
+        <a class="btn ghost" href="index.html#research">返回论文 / 专利</a>
+      </p>
+    </article>
+  </main>
+  <script src="script.js"></script>
+</body>
+</html>

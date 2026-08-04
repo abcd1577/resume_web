@@ -314,22 +314,27 @@
 
     <div class="research-grid">
       <article class="research-card paper">
-        <div class="rc-tag">EAAI 小修阶段</div>
-        <h3 class="rc-title">Spec-PINN：算子诱导流形嵌入的物理信息神经网络</h3>
-        <p class="rc-en">Physical Information Neural Network Based on Operator-Induced Manifold Embedding for Wave Propagation and Medium Inversion</p>
-        <p class="rc-meta">Engineering Applications of Artificial Intelligence (EAAI) · 小修阶段 · <strong>第一作者</strong></p>
+        <div class="rc-tag">EAAI · 返修</div>
+        <h3 class="rc-title">Spec-PINN：基于算子诱导流形嵌入的物理信息神经网络</h3>
+        <p class="rc-en">Physics-informed neural network based on operator-induced manifold embedding for wave propagation and medium inversion</p>
+        <p class="rc-meta">Engineering Applications of Artificial Intelligence (EAAI) · 返修 · <strong>共同一作</strong></p>
         <p class="rc-desc">
-          针对物理信息神经网络（PINN）在求解高频 Helmholtz 方程时的两大顽疾——
-          <strong>谱偏差</strong>（高频振荡难拟合）与逆问题<strong>"周期跳跃"</strong>（非凸优化陷局部最优），
-          提出 <strong>Spec-PINN</strong> 框架，把解析物理性质内化进网络结构：
+          针对 PINN 求解高频 Helmholtz 方程时的<strong>谱偏差</strong>与逆问题<strong>周期跳跃</strong>，
+          提出 <strong>Spec-PINN</strong>：用算子诱导流形嵌入把 Helmholtz 解析性质写入网络结构。
         </p>
         <ul class="rc-list">
-          <li>正问题：构造由<strong>基本解算子诱导</strong>的物理核嵌入层，从根源消除数值色散；</li>
-          <li>逆问题：设计<strong>渐近多尺度基双网络架构</strong>，将棘手的频率搜索转化为鲁棒的权重优化；</li>
-          <li>非均匀介质 benchmark 上，相比 FE-HRKAN 等 SOTA 方法在<strong>精度与收敛速度</strong>上均有显著提升。</li>
+          <li>正问题：MFS / Bessel 物理核 + 源项谱通道双嵌入，高波数 k 至 1000 仍保持约 1e-4 相对 L2 误差；</li>
+          <li>逆问题：渐近多尺度基双网络，将波数搜索转成更稳的权重优化，抑制 cycle-skipping；</li>
+          <li>非均匀介质反演上，相对 Fourier baseline 参数误差由约 4.76% 降至约 0.36%。</li>
         </ul>
+        <div class="rc-thumbs" aria-label="论文典型图预览">
+          <img decoding="async" loading="lazy" src="assets/spec-pinn-arch-forward.webp" alt="Spec-PINN 正问题物理核嵌入架构" width="280" height="126">
+          <img decoding="async" loading="lazy" src="assets/spec-pinn-forward-k100.webp" alt="高波数正问题解对比" width="280" height="76">
+          <img decoding="async" loading="lazy" src="assets/spec-pinn-inverse-compare.webp" alt="非均匀介质反演对比" width="280" height="155">
+        </div>
         <div class="rc-links">
-          <a href="Physical information neural network based on operator-induced manifold embedding for wave propagation and medium Inversion.pdf" target="_blank">查看论文 PDF →</a>
+          <a href="paper-spec-pinn.html">查看论文介绍 →</a>
+          <a href="Physics-informed neural network based on operator-induced manifold embedding for wave propagation and medium inversion.pdf" target="_blank" rel="noopener">PDF →</a>
         </div>
       </article>
 
