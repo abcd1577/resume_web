@@ -905,6 +905,23 @@ img { max-width: 100%; display: block; }
   .rc-thumbs img { height: 96px; }
 }
 
+/* 单张佐证截图（专利审批 / KM 好文） */
+.rc-thumb {
+  margin: 0.15rem 0 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  background: var(--bg-alt);
+}
+.rc-thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 180px;
+  object-fit: cover;
+  object-position: top left;
+}
+
 
 /* ============================================================
    博客列表
