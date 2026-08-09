@@ -28,9 +28,9 @@
   <main class="project-library single-project">
     <article class="project-report">
     <header class="report-header">
-      <p class="report-kicker">04 · 主要负责人 · 2026.04</p>
-      <h1>大模型驱动的发票用户标签体系构建与业务应用</h1>
-      <p class="report-summary">项目先用大模型快速挖掘发票中的可解释标签，再把 2,338 种长尾自由标签归纳成完整的发票标签体系，让标签可以入库、圈选、评估，并和产品一起持续共建。</p>
+      <p class="report-kicker">01 · 主要负责人 · 2026.01–2026.09</p>
+      <h1>基于双 LLM Agent 的开放式用户标签挖掘与 Taxonomy 归纳</h1>
+      <p class="report-summary">针对发票数据信息密度高，搭建双 LLM Agent 快速挖掘可解释标签，再归纳为 L1-L3 taxonomy；并对 9B 做结构化 SFT，降低全量推理成本。</p>
       
       <dl class="report-metrics">
         
@@ -40,13 +40,13 @@
         </div>
         
         <div>
-          <dt>单用户长尾</dt>
-          <dd>约 76%</dd>
+          <dt>全量打标周期</dt>
+          <dd>约 10 天 → 4–5 天</dd>
         </div>
         
         <div>
-          <dt>170 万用户推理周期</dt>
-          <dd>10 天 → 2.4 天</dd>
+          <dt>HVLR 7+ Lift</dt>
+          <dd>约 0.14</dd>
         </div>
         
       </dl>
@@ -136,7 +136,7 @@
   <img decoding="async" loading="lazy" src="assets/invoice-evaluation-workflow.webp" alt="发票标签方案从调研、设计、抽样、评测到裁判复核的实验流程" width="1400" height="790">
   <figcaption>图 4 · 方案评估与裁判复核流程。差异样本经过二次判断，避免只凭少量案例选择方案。</figcaption>
 </figure>
-<p><strong>第四步：工程提效与二次 Agent。</strong> 发票全量生产如果直接按原链路跑，成本和耗时都不可接受。我主要从 prefix cache、搜一搜摘要截断、模型选型和并行度调优几方面压缩成本：针对约 <strong>171 万</strong>开通有发票用户，将全量生产由约 <strong>10 天</strong>压至 <strong>2–6 天</strong>。二次 Agent 则使用阶段一的 <code>buyer_top5</code>、<code>occupation</code> 和原始证据，将开放语义收敛为严格二分类，只对争议样本调用裁判 Agent。</p>
+<p><strong>第四步：工程提效、SFT 与二次 Agent。</strong> 发票全量生产如果直接按原链路跑，成本和耗时都不可接受。我主要从优化搜一搜、prefix_cache、模型选型与并行度几方面压缩成本：针对约 <strong>171 万</strong>开通有发票用户，将全量打标由约 <strong>10 天</strong>压至 <strong>4–5 天</strong>。针对全量推理成本高，进一步用 Qwen3.5-27B 对 20 万样本离线推理，经近义归并与分层过采样得到 5 万监督数据，并以 LoRA 对 9B 做结构化 SFT；loss 约 0.13，标签准确性差距约 3.8%。二次 Agent 则使用阶段一证据将开放语义收敛为严格二分类，只对争议样本调用裁判 Agent。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/invoice-parallelism-benchmark.webp" alt="发票标签批处理并行度从 8 到 512 与端到端耗时的基准测试" width="1400" height="751">
   <figcaption>图 5 · 并行度与运行耗时。256 附近是本次环境的最优点，继续增加并发反而变慢。</figcaption>
@@ -144,7 +144,7 @@
 
 <h2 id="result">项目结果｜形成标签资产闭环，并支撑业务评估与治理</h2>
 <p>以大厂员工金标为例，Agent Accuracy 为 <strong>0.592</strong>，V4 为 0.490；Agent Precision 为 <strong>0.675</strong>，V4 为 0.488。去除 unknown 后 Accuracy 提升 <strong>12.15 个百分点</strong>；裁判 Agent 在分歧样本中支持新方案的比例为 <strong>99.18%</strong>。</p>
-<p>工程侧 prefix cache 提速约 <strong>21%</strong>，搜索摘要截断提速约 <strong>36%</strong> 且 F1 未下降；切换小模型后，170 万用户推理周期由约 <strong>10 天</strong>压缩到 <strong>2–6 天</strong>。三级体系进一步在九个一级主题上检查覆盖，并对 138 个可评估标签统计 0+ 金额违约 Lift。</p>
+<p>工程侧综合优化后，约 171 万用户全量打标由约 <strong>10 天</strong>压至 <strong>4–5 天</strong>；结构化 SFT 后标签准确性差距约 <strong>3.8%</strong>。三级体系进一步在九个一级主题上检查覆盖，并对可评估标签统计金额违约 Lift；HVLR 核心人群 7+ Lift 约 <strong>0.14</strong>。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/invoice-taxonomy-evaluation.webp" alt="发票三级标签体系的一级主题覆盖和金额违约 Lift 分布" width="1400" height="574">
   <figcaption>图 6 · 标签体系覆盖广度与风险区分度。图中只包含汇总数据，不含用户级明细。</figcaption>

@@ -28,20 +28,20 @@
   <main class="project-library single-project">
     <article class="project-report">
     <header class="report-header">
-      <p class="report-kicker">02 · 独立负责 · 2026</p>
-      <h1>基于 Harness 评测框架与 TextGrad 范式的 Agent 自动化优化框架研究与落地</h1>
+      <p class="report-kicker">03 · 主要负责人 · 2026.01–2026.09</p>
+      <h1>基于 Harness 评测框架与 TextGrad 范式的 Agent 评测体系和可迭代优化闭环</h1>
       <p class="report-summary">借鉴 TextGrad 的文本反向传播纪律，为 RAG Agent 补上 Prompt / KB 归因、中间态采集、回归门禁和人工审批，把人工试错改造成有证据、可追溯、可回滚的工程流程。</p>
       
       <dl class="report-metrics">
         
         <div>
-          <dt>简历阶段 0 分率</dt>
-          <dd>约 25% → 3%</dd>
+          <dt>0 分率</dt>
+          <dd>约 25% → 3.8%</dd>
         </div>
         
         <div>
-          <dt>patch 溯源率</dt>
-          <dd>100%</dd>
+          <dt>Cohen’s κ</dt>
+          <dd>0.76</dd>
         </div>
         
         <div>
@@ -81,7 +81,7 @@
 </figure>
 
 <h2 id="result">项目结果｜0 分率下降，迭代从技巧变成工程资产</h2>
-<p>简历阶段口径下，四轮调优后 0 分率由约 <strong>25% 降至 3%</strong>；每条 patch 均绑定 gradient 与源 case，溯源率 <strong>100%</strong>；单轮迭代由人工约 <strong>2 小时</strong>缩短至约 <strong>20 分钟</strong>。</p>
+<p>四轮调优后，LLM Judge 与金标的 Cohen’s \(\kappa\) 达到 <strong>0.76</strong>，0 分率由约 <strong>25% 降至 3.8%</strong>；每条 patch 均绑定 gradient 与源 case，溯源率 <strong>100%</strong>；单轮迭代由人工约 <strong>2 小时</strong>缩短至约 <strong>20 分钟</strong>。五维 Rubric 采用事实、完整性、个性化、简洁性、合规性，并配合 Prompt vs KB 五类结构化归因与四道 Human-in-the-loop 确认。</p>
 <p>更重要的是，题库、变量、中间态、梯度、patch 和回归结果能够串成证据链。产品或后续维护者可以复现修改原因，而不是从最终 Prompt 反推历史。四个踩坑也被固化为流程约束：中间态必采、Prompt / KB 边界、冻结清单和 N≥3 众数规则。</p>
 
     </article>
