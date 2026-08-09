@@ -45,20 +45,27 @@ HTML_SHELL = """<!DOCTYPE html>
   <title>{title} · 侯奇瑞</title>
   <meta name="description" content="{description}" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" crossorigin="anonymous" />
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" crossorigin="anonymous"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
+  <script defer src="assets/vendor/katex/katex.min.js"></script>
+  <script defer src="assets/vendor/katex/auto-render.min.js"></script>
   <script>
-    document.addEventListener("DOMContentLoaded", function () {{
-      if (!window.renderMathInElement) return;
+    var __mathRendered = false;
+    function renderAllMath() {{
+      if (__mathRendered || !window.renderMathInElement) return;
+      __mathRendered = true;
       window.renderMathInElement(document.body, {{
         delimiters: [
           {{ left: "$$", right: "$$", display: true }},
-          {{ left: "$", right: "$", display: false }}
+          {{ left: "\\\\[", right: "\\\\]", display: true }},
+          {{ left: "$", right: "$", display: false }},
+          {{ left: "\\\\(", right: "\\\\)", display: false }}
         ],
+        ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
         throwOnError: false
       }});
-    }});
+    }}
+    document.addEventListener("DOMContentLoaded", renderAllMath);
+    window.addEventListener("load", renderAllMath);
   </script>
 </head>
 <body>

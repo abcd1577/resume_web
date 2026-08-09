@@ -6,21 +6,27 @@
   <title>LLM 在表格数据预测中的最新进展调研 · 侯奇瑞</title>
   <meta name="description" content="系统梳理 TabPFN、TabLLM、InsightTab、FeatLLM 等表格预测路线，并总结端到端优化框架。" />
   <link rel="stylesheet" href="style.css" />
-  <link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" as="style" crossorigin="anonymous" onload="this.onload=null;this.rel='stylesheet'" />
-  <noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" crossorigin="anonymous" /></noscript>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" crossorigin="anonymous"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" crossorigin="anonymous"></script>
+  <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
+  <script defer src="assets/vendor/katex/katex.min.js"></script>
+  <script defer src="assets/vendor/katex/auto-render.min.js"></script>
   <script>
-    document.addEventListener("DOMContentLoaded", function () {
-      if (!window.renderMathInElement) return;
+    var __mathRendered = false;
+    function renderAllMath() {
+      if (__mathRendered || !window.renderMathInElement) return;
+      __mathRendered = true;
       window.renderMathInElement(document.body, {
         delimiters: [
           { left: "$$", right: "$$", display: true },
-          { left: "$", right: "$", display: false }
+          { left: "\\[", right: "\\]", display: true },
+          { left: "$", right: "$", display: false },
+          { left: "\\(", right: "\\)", display: false }
         ],
+        ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
         throwOnError: false
       });
-    });
+    }
+    document.addEventListener("DOMContentLoaded", renderAllMath);
+    window.addEventListener("load", renderAllMath);
   </script>
 </head>
 <body>
