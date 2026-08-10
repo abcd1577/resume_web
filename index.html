@@ -311,18 +311,18 @@
   <section id="projects" class="section">
     <p class="eyebrow">PROJECT · 深度排序 / 长序列</p>
     <h2>项目经历</h2>
-    <p class="section-intro">腾讯实习内的五个项目见上方「实习经历」；这里单列一个与实习无关的个人项目——超长序列 CTR 预估：标题保留搜广推场景，能力上可迁移到检索、门控融合、多模态与大规模训练评测。</p>
+    <p class="section-intro">腾讯实习内的五个项目见上方「实习经历」；这里单列个人项目——超长序列 CTR 预估。重点是两项创新：TriGate 三路门控，以及 SimTier 消融与 Scaling 对照（加深骨干几乎不涨点）。</p>
     <div class="case-grid">
       <article class="case-card featured">
         <p class="case-no">06 · 深度排序 / 长序列</p>
         <h3>基于多路检索与多模态融合的超长序列 CTR 预估</h3>
-        <p class="case-summary">在 TAOBAO-MM 部分 shard 上搭建约 2450 万训练 / 500 万测试的离线管线；用粗检索 + 精建模处理长行为序列，并以三路门控融合近因、图文语义与类目兴趣。同一套能力可迁移到推荐、广告与通用深度排序。</p>
-        <div class="metric-row"><div><strong>0.6188</strong><span>Test GAUC</span></div><div><strong>+0.55pp</strong><span>vs DIN+MM</span></div><div><strong>22</strong><span>基线与消融</span></div></div>
-        <div class="tags"><span>GSU / ESU</span><span>门控融合</span><span>多模态</span><span>消融评测</span><span>大规模训练</span></div>
+        <p class="case-summary">提出 TriGate-MUSE：近因 ⊕ 多模态 soft GSU ⊕ 类目 hard GSU 三路 Softmax 门控；用 SimTier 编码语义相似度分布（去掉 −0.45pp）。Scaling 对照显示同输入加深 OneTrans/RankMixer/HyFormer 最好仅 +0.05pp，佐证瓶颈在检索与 ESU。</p>
+        <div class="metric-row"><div><strong>0.6188</strong><span>Test GAUC</span></div><div><strong>+0.55pp</strong><span>vs DIN+MM</span></div><div><strong>−0.45pp</strong><span>去 SimTier</span></div></div>
+        <div class="tags"><span>TriGate</span><span>SimTier</span><span>GSU / ESU</span><span>Scaling 对照</span><span>消融评测</span></div>
         <a class="case-link" href="project-long-sequence-ctr.html">查看完整项目报告 <span>→</span></a>
       </article>
     </div>
-    <p class="evidence-note"><strong>材料说明：</strong>长序列 CTR 使用公开数据离线实验，不宣称官方全量复现或线上 A/B；公式与图表按可公开口径呈现。</p>
+    <p class="evidence-note"><strong>材料说明：</strong>长序列 CTR 使用公开数据离线实验；Scaling ladder 为 lite 对照/负结果，不宣称官方全量复现、线上 A/B 或打赢生产级骨干。</p>
   </section>
 
   <!-- 论文 / 专利 / 技术好文 -->
