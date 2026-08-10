@@ -311,18 +311,18 @@
   <section id="projects" class="section">
     <p class="eyebrow">PROJECT · 深度排序 / 长序列</p>
     <h2>项目经历</h2>
-    <p class="section-intro">腾讯实习内的五个项目见上方「实习经历」；这里单列个人项目——超长序列 CTR 预估。重点是两项创新：TriGate 三路门控，以及 SimTier 消融与 Scaling 对照（加深骨干几乎不涨点）。</p>
+    <p class="section-intro">腾讯实习内的五个项目见上方「实习经历」；这里单列个人项目——超长序列 CTR 预估。主创新是 TriGate 三路门控，再叠加 LenAdapt/RoleMix；并用 SimTier 消融与 Scaling 对照证明检索输入比加深骨干更关键。</p>
     <div class="case-grid">
       <article class="case-card featured">
         <p class="case-no">06 · 深度排序 / 长序列</p>
         <h3>基于多路检索与多模态融合的超长序列 CTR 预估</h3>
-        <p class="case-summary">提出 TriGate-MUSE：近因 ⊕ 多模态 soft GSU ⊕ 类目 hard GSU 三路 Softmax 门控；用 SimTier 编码语义相似度分布（去掉 −0.45pp）。Scaling 对照显示同输入加深 OneTrans/RankMixer/HyFormer 最好仅 +0.05pp，佐证瓶颈在检索与 ESU。</p>
-        <div class="metric-row"><div><strong>0.6188</strong><span>Test GAUC</span></div><div><strong>+0.55pp</strong><span>vs DIN+MM</span></div><div><strong>−0.45pp</strong><span>去 SimTier</span></div></div>
-        <div class="tags"><span>TriGate</span><span>SimTier</span><span>GSU / ESU</span><span>Scaling 对照</span><span>消融评测</span></div>
+        <p class="case-summary">TriGate-MUSE 融合近因 ⊕ 多模态 soft GSU ⊕ 类目 hard GSU；LenAdapt/RoleMix 并列最优 GAUC 0.6196。SimTier 去掉 −0.45pp；关闭 GSU 加深骨干几乎不涨，OneTrans 接入 MM soft GSU 后升至 0.6186。</p>
+        <div class="metric-row"><div><strong>0.6196</strong><span>Test GAUC</span></div><div><strong>+0.63pp</strong><span>vs DIN+MM</span></div><div><strong>+0.14pp</strong><span>vs TriGate</span></div></div>
+        <div class="tags"><span>TriGate</span><span>LenAdapt</span><span>RoleMix</span><span>SimTier</span><span>Scaling 对照</span></div>
         <a class="case-link" href="project-long-sequence-ctr.html">查看完整项目报告 <span>→</span></a>
       </article>
     </div>
-    <p class="evidence-note"><strong>材料说明：</strong>长序列 CTR 使用公开数据离线实验；Scaling ladder 为 lite 对照/负结果，不宣称官方全量复现、线上 A/B 或打赢生产级骨干。</p>
+    <p class="evidence-note"><strong>材料说明：</strong>公开数据离线实验；主报 LenAdapt/RoleMix；Scaling 为 lite 对照，不宣称官方全量、线上 A/B 或打赢生产级骨干。</p>
   </section>
 
   <!-- 论文 / 专利 / 技术好文 -->

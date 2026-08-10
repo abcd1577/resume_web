@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>基于多路检索与多模态融合的超长序列 CTR 预估 · 侯奇瑞</title>
-  <meta name="description" content="TAOBAO-MM 长序列 CTR：TriGate 三路门控、SimTier 消融、Scaling ladder 对照。面向推荐广告与通用机器学习岗位。" />
+  <meta name="description" content="TAOBAO-MM 长序列 CTR：TriGate 三路门控、LenAdapt/RoleMix、SimTier 消融与 Scaling 对照。GAUC 0.6196。" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
   <script defer src="assets/vendor/katex/katex.min.js"></script>
@@ -36,20 +36,19 @@
     <header class="report-header">
       <p class="report-kicker">06 · 个人项目 / 独立完成 · 公开数据离线实验</p>
       <h1>基于多路检索与多模态融合的超长序列 CTR 预估</h1>
-      <p class="report-summary">两个创新点：TriGate 三路 Softmax 门控（近因 / 多模态 soft / 类目 hard），以及 SimTier 语义分布编码；并用 Scaling ladder 对照证明加深骨干替代不了检索与 ESU。</p>
-      
+      <p class="report-summary">TriGate 三路门控为底座，LenAdapt / RoleMix 再抬点至 GAUC 0.6196；SimTier 消融与 Scaling 对照证明：涨点来自检索与多模态 ESU，不是加深骨干。</p>
       <dl class="report-metrics">
         <div>
           <dt>Test GAUC</dt>
-          <dd>0.6188</dd>
+          <dd>0.6196</dd>
         </div>
         <div>
           <dt>相对 DIN+MM</dt>
-          <dd>+0.55pp</dd>
+          <dd>+0.63pp</dd>
         </div>
         <div>
-          <dt>训练 / 测试规模</dt>
-          <dd>约 2450 万 / 500 万</dd>
+          <dt>相对 TriGate</dt>
+          <dd>+0.14pp</dd>
         </div>
       </dl>
     </header>
@@ -58,64 +57,69 @@
 <p>特征交叉模型常把历史行为压成 mean pooling；DIN 能按候选商品做 target-aware attention，但历史继续变长后，无关行为会稀释兴趣并抬高计算成本。项目基于淘宝工业 CTR 公开数据 TAOBAO-MM 的<strong>部分 shard</strong>，构建约 <strong>2450 万训练 / 50 万验证 / 500 万测试</strong>样本的离线评测管线，历史最大长度 160，默认检索宽度 $K=80$。</p>
 <p>这不是公司线上系统，也不是官方 76M/23M 全量协议复现。目标是在可核验的统一协议下，把“如何从超长历史中保留短期兴趣，同时补充跨时间相关行为”讲清楚。</p>
 
-<h2 id="task">项目目标｜建立可迁移的长序列深度排序能力闭环</h2>
+<h2 id="task">项目目标｜检索融合 + 结构增强 + 对照闭环</h2>
 <p>项目目标分三层：</p>
 <ul>
   <li><strong>场景层：</strong>提升 CTR 排序，主指标用 GAUC，同时报告 AUC、LogLoss、ECE；</li>
-  <li><strong>方法层：</strong>从特征交叉与 DIN/DIEN 基线，演进到 GSU 粗检索 + ESU 精建模，再到 TriGate 三路门控与 SimTier；</li>
-  <li><strong>对照层：</strong>同输入关闭 GSU，加深 OneTrans / RankMixer / HyFormer lite，验证瓶颈是否真在骨干深度。</li>
+  <li><strong>方法层：</strong>GSU/ESU → TriGate 三路门控 → LenAdapt / RoleMix；</li>
+  <li><strong>对照层：</strong>SimTier 消融；关闭 GSU 加深骨干 vs OneTrans+MM-GSU。</li>
 </ul>
 
-<h2 id="action">技术路径｜基线 → TriGate → SimTier → Scaling 对照</h2>
-<p><strong>1. 建立完整基线。</strong> 复现 Wide&amp;Deep、DeepFM、DCN、DIN/DIEN、SIM/TWIN-lite 等共 22 组基线与消融。DIN 对历史做 target-aware attention：</p>
-<p>$$
-\mathbf{u}_{\mathrm{DIN}}=\sum_t \alpha_t(\mathbf{e}_t,\mathbf{e}_{\mathrm{target}})\mathbf{e}_t
-$$</p>
-<p>DIN+MM 将 GAUC 提升到 0.6133，但仍暴露出固定窗口内“继续加复杂兴趣演化收益有限、瓶颈在超长历史检索”的问题。</p>
+<h2 id="action">技术路径｜TriGate → LenAdapt/RoleMix → Scaling</h2>
+<p><strong>1. 建立完整基线。</strong> 复现特征交叉、DIN/DIEN、SIM/TWIN-lite 等基线与消融。DIN+MM 将 GAUC 提升到 0.6133，但仍暴露出固定窗口内“继续加复杂兴趣演化收益有限、瓶颈在超长历史检索”的问题。</p>
 
-<p><strong>2. 粗检索 + 精建模。</strong> 采用 SIM 两阶段：GSU 从长历史召回 top-k，ESU 再做精细建模。近因通道必须保留，检索只做增量补充。进一步设计门控残差：</p>
+<p><strong>2. 粗检索 + 精建模。</strong> 采用 SIM 两阶段：GSU 从长历史召回 top-k，ESU 再做精细建模。近因通道必须保留，检索只做增量补充。门控残差：</p>
 <p>$$
 \mathbf{h}_{\mathrm{fused}}=\mathbf{h}_{\mathrm{rec}}+g\cdot\mathbf{h}_{\mathrm{ret}}
 $$</p>
 <p>近因系数恒为 1；检索质量差时 $g$ 接近 0，避免噪声污染。</p>
 
-<p><strong>3. 多模态与三路门控（创新 A）。</strong> 商品表征同时使用可训练 item ID、类目 embedding 与冻结 SCL 多模态向量。SimTier 把历史相对目标的多模态相似度做成分布特征；TriGate-MUSE 对 recent、MM soft GSU、category hard GSU 三路兴趣做 Softmax 门控：</p>
+<p><strong>3. TriGate 三路门控（创新底座）。</strong> 商品表征同时使用可训练 item ID、类目 embedding 与冻结 SCL 多模态向量。TriGate-MUSE 对 recent、MM soft GSU、category hard GSU 三路兴趣做 Softmax 门控：</p>
 <p>$$
 \mathbf{h}_{\mathrm{fused}}=w_{\mathrm{rec}}\mathbf{h}_{\mathrm{rec}}+w_{\mathrm{mm}}\mathbf{h}_{\mathrm{mm}}+w_{\mathrm{cat}}\mathbf{h}_{\mathrm{cat}}
 $$</p>
 <figure>
   <img decoding="async" src="assets/long-sequence-architecture.webp" alt="TriGate-MUSE 网络架构：三路 GSU/ESU、Softmax 门控融合与 CTR 预测头" width="2352" height="1760" fetchpriority="high" loading="eager">
-  <figcaption>图 1 · TriGate-MUSE 整体架构。底部 Embedding；中部近因 / 多模态 soft GSU / 类目 hard GSU 三路并行（$K=80$，检索只追加不替换）；红色框为 Softmax 三路门控融合（ours）；顶部 MLP 输出 $p(\mathrm{click})$。</figcaption>
+  <figcaption>图 1 · TriGate-MUSE 整体架构。三路并行（$K=80$，检索只追加不替换）；红色框为 Softmax 三路门控融合（ours）。</figcaption>
 </figure>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/long-sequence-gate-weights.png" alt="TriGate 三路 Softmax 门控权重分布，近因主导、检索补位" width="1200" height="700">
-  <figcaption>图 2 · 门控权重分布。测试集平均权重约 recent 0.783 / MM 0.118 / category 0.099，符合“近因主导、检索补位”。</figcaption>
+  <img decoding="async" loading="lazy" src="assets/long-sequence-gate-weights.png" alt="TriGate 三路 Softmax 门控权重分布" width="1200" height="700">
+  <figcaption>图 2 · 基线 TriGate 门控权重约 recent 0.783 / MM 0.118 / category 0.099。</figcaption>
 </figure>
 
-<p><strong>4. SimTier 消融与 Scaling 对照（创新 B）。</strong> 去掉 SimTier 后 GAUC 从 0.6173 降至 0.6128（约 −0.45pp），是最强单模块证据。进一步在与 DIN 同输入、刻意关闭 GSU 的设定下，只把主干换成 OneTrans / RankMixer / HyFormer lite 并加深：最好的 OneTrans-L 仅 GAUC 0.6138（相对 DIN+MM +0.05pp），远低于 TriGate，说明单纯加深序列骨干替代不了检索与多模态 ESU。这是 lite 对照/负结果，不是生产级完整复刻。</p>
+<p><strong>4. LenAdapt / RoleMix（当前最优）。</strong> 在 TriGate 上引入长度条件门控（LenAdapt）与角色混合（RoleMix），二者并列最优：AUC <strong>0.6209</strong>、GAUC <strong>0.6196</strong>，相对 TriGate +0.14pp、相对 DIN+MM +0.63pp。Gate×历史长度切片显示：短序列显著抬高 MM soft（约 0.55），长序列再抬 recent；ultra 桶 Combo GAUC 高于基线 TriGate。LenAdapt⊕RoleMix 组合未叠加到更高 GAUC（0.6193），说明两路改进部分正交不足。</p>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/long-sequence-scaling-ladder-gauc.png" alt="OneTrans/RankMixer/HyFormer Scaling ladder 与 DIN+MM、TriGate 对照" width="1400" height="900">
-  <figcaption>图 3 · Scaling ladder 对照。同输入、关闭 GSU 时加深骨干几乎不涨点；真正拉开差距的是 GSU + TriGate/MUSE。</figcaption>
+  <img decoding="async" loading="lazy" src="assets/long-sequence-innovation-ladder-gauc.png" alt="创新结构梯子：LenAdapt/RoleMix 相对 TriGate 抬点" width="1400" height="900">
+  <figcaption>图 3 · 创新结构梯子。LenAdapt / RoleMix 并列最优 GAUC 0.6196。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/long-sequence-gate-by-histlen.png" alt="按历史长度切片的三路门控权重变化" width="1200" height="700">
+  <figcaption>图 4 · Gate × 历史长度。长度条件门控让短/长序列的三路分工发生变化。</figcaption>
 </figure>
 
-<p><strong>5. 大规模训练工程。</strong> 用 compact 词表与频次截断处理百万级 item embedding；用 streaming memmap 规避全量样本驻留内存；embedding / dense 双学习率；按 val AUC 早停，避免第二轮过拟合。</p>
-
+<p><strong>5. SimTier 消融与 Scaling 对照。</strong> 去掉 SimTier 后 GAUC 从 0.6173 降至 0.6128（约 −0.45pp）。同输入关闭 GSU 时加深 OneTrans/RankMixer/HyFormer 最好仅 0.6138；而 OneTrans 接入 MM soft GSU 后升至 <strong>0.6186</strong>，证明骨干必须吃检索输入。</p>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/long-sequence-leaderboard-gauc.png" alt="主线模型在本地 full 协议上的 GAUC 排行榜" width="1400" height="900">
-  <figcaption>图 4 · 本地 full 协议下的主线 GAUC 排行榜。最佳 TriGate 变体 GAUC 0.6188。</figcaption>
+  <img decoding="async" loading="lazy" src="assets/long-sequence-scaling-ladder-gauc.png" alt="Scaling ladder 对照" width="1400" height="900">
+  <figcaption>图 5 · Scaling ladder。关闭 GSU 加深骨干几乎不涨；真正拉开差距的是检索 + ESU。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/long-sequence-innovation-delta.png" alt="相对 TriGate 的 GAUC 增益条形图" width="1400" height="900">
+  <figcaption>图 6 · 相对 TriGate 的 ΔGAUC。LenAdapt/RoleMix 约 +0.14pp；PosDecay≈0。</figcaption>
 </figure>
 
-<h2 id="result">项目结果｜离线增益可核验，对照说明瓶颈所在</h2>
-<p>最佳无 ranking-loss 变体在 500 万测试样本上取得 <strong>AUC 0.6201、GAUC 0.6188、ECE 0.0063</strong>，相对 DIN+MM 的 GAUC 提升约 <strong>0.55pp</strong>。去掉 SimTier 后约 <strong>−0.45pp</strong>；Scaling 对照最好仅 <strong>+0.05pp</strong>。二者一起说明：涨点来自检索与多模态 ESU，而不是“换更深 Transformer”。</p>
+<p><strong>6. 大规模训练工程。</strong> compact 词表与频次截断、streaming memmap、embedding/dense 双学习率、按 val AUC 早停（ep2 易过拟合）。</p>
+
+<h2 id="result">项目结果｜主报 0.6196，对照说明瓶颈所在</h2>
+<p>主报 <strong>LenAdapt / RoleMix</strong>：在 500 万测试样本上取得 <strong>AUC 0.6209、GAUC 0.6196</strong>，相对 DIN+MM 约 <strong>+0.63pp</strong>，相对 TriGate 约 <strong>+0.14pp</strong>。SimTier 消融约 <strong>−0.45pp</strong>；OneTrans+MM-GSU 达到 <strong>0.6186</strong>。结论：涨点来自三路检索融合与长度/角色自适应，而不是“换更深 Transformer”。</p>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/long-sequence-gauc-by-histlen.png" alt="按历史长度切片的 TriGate GAUC" width="1200" height="700">
-  <figcaption>图 5 · 历史长度切片。更长行为用户绝对 GAUC 更高，支撑长序列建模价值；这是主模型绝对切片，不是相对基线的分桶 uplift。</figcaption>
+  <img decoding="async" loading="lazy" src="assets/long-sequence-gauc-by-histlen-compare.png" alt="TriGate 与 LenAdapt 组合按历史长度的 GAUC 对比" width="1200" height="700">
+  <figcaption>图 7 · 历史长度切片对比。长度自适应后 ultra 桶绝对 GAUC 更高。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/long-sequence-topk-gauc-latency.png" alt="top-k 与 GAUC、GSU 延迟的权衡" width="1200" height="700">
-  <figcaption>图 6 · top-k 与延迟权衡。同 checkpoint 推理扫描中，$K=80$ 到 $120$ 仍有增益；GSU 瓶颈主要在多模态 soft 检索。</figcaption>
+  <figcaption>图 8 · top-k 与延迟权衡。GSU 瓶颈主要在多模态 soft 检索。</figcaption>
 </figure>
-<p><strong>面试表达建议：</strong>先讲 TriGate 门控分工与 SimTier 消融，再用 Scaling 对照回答“为什么不直接上更深骨干”。不要宣称官方全量 SOTA、线上 A/B，或打赢生产级 OneTrans/RankMixer。</p>
+<p><strong>面试表达建议：</strong>先讲 TriGate 分工，再讲 LenAdapt/RoleMix 抬点与 Gate×hist_len；用 Scaling 回答“为什么不直接上更深骨干”。不要宣称官方全量 SOTA、线上 A/B，或 LenAdapt+RoleMix 已叠加涨点。</p>
 
     </article>
   </main>
