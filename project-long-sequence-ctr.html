@@ -84,32 +84,36 @@ $$</p>
 \mathbf{h}_{\mathrm{fused}}=w_{\mathrm{rec}}\mathbf{h}_{\mathrm{rec}}+w_{\mathrm{mm}}\mathbf{h}_{\mathrm{mm}}+w_{\mathrm{cat}}\mathbf{h}_{\mathrm{cat}}
 $$</p>
 <figure>
-  <img decoding="async" src="assets/long-sequence-gate-weights.png" alt="TriGate 三路 Softmax 门控权重分布，近因主导、检索补位" width="1200" height="700" fetchpriority="high" loading="eager">
-  <figcaption>图 1 · 门控权重分布。测试集平均权重约 recent 0.783 / MM 0.118 / category 0.099，符合“近因主导、检索补位”。</figcaption>
+  <img decoding="async" src="assets/long-sequence-architecture.webp" alt="TriGate-MUSE 网络架构：三路 GSU/ESU、Softmax 门控融合与 CTR 预测头" width="2352" height="1760" fetchpriority="high" loading="eager">
+  <figcaption>图 1 · TriGate-MUSE 整体架构。底部 Embedding；中部近因 / 多模态 soft GSU / 类目 hard GSU 三路并行（$K=80$，检索只追加不替换）；红色框为 Softmax 三路门控融合（ours）；顶部 MLP 输出 $p(\mathrm{click})$。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/long-sequence-gate-weights.png" alt="TriGate 三路 Softmax 门控权重分布，近因主导、检索补位" width="1200" height="700">
+  <figcaption>图 2 · 门控权重分布。测试集平均权重约 recent 0.783 / MM 0.118 / category 0.099，符合“近因主导、检索补位”。</figcaption>
 </figure>
 
 <p><strong>4. SimTier 消融与 Scaling 对照（创新 B）。</strong> 去掉 SimTier 后 GAUC 从 0.6173 降至 0.6128（约 −0.45pp），是最强单模块证据。进一步在与 DIN 同输入、刻意关闭 GSU 的设定下，只把主干换成 OneTrans / RankMixer / HyFormer lite 并加深：最好的 OneTrans-L 仅 GAUC 0.6138（相对 DIN+MM +0.05pp），远低于 TriGate，说明单纯加深序列骨干替代不了检索与多模态 ESU。这是 lite 对照/负结果，不是生产级完整复刻。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/long-sequence-scaling-ladder-gauc.png" alt="OneTrans/RankMixer/HyFormer Scaling ladder 与 DIN+MM、TriGate 对照" width="1400" height="900">
-  <figcaption>图 2 · Scaling ladder 对照。同输入、关闭 GSU 时加深骨干几乎不涨点；真正拉开差距的是 GSU + TriGate/MUSE。</figcaption>
+  <figcaption>图 3 · Scaling ladder 对照。同输入、关闭 GSU 时加深骨干几乎不涨点；真正拉开差距的是 GSU + TriGate/MUSE。</figcaption>
 </figure>
 
 <p><strong>5. 大规模训练工程。</strong> 用 compact 词表与频次截断处理百万级 item embedding；用 streaming memmap 规避全量样本驻留内存；embedding / dense 双学习率；按 val AUC 早停，避免第二轮过拟合。</p>
 
 <figure>
   <img decoding="async" loading="lazy" src="assets/long-sequence-leaderboard-gauc.png" alt="主线模型在本地 full 协议上的 GAUC 排行榜" width="1400" height="900">
-  <figcaption>图 3 · 本地 full 协议下的主线 GAUC 排行榜。最佳 TriGate 变体 GAUC 0.6188。</figcaption>
+  <figcaption>图 4 · 本地 full 协议下的主线 GAUC 排行榜。最佳 TriGate 变体 GAUC 0.6188。</figcaption>
 </figure>
 
 <h2 id="result">项目结果｜离线增益可核验，对照说明瓶颈所在</h2>
 <p>最佳无 ranking-loss 变体在 500 万测试样本上取得 <strong>AUC 0.6201、GAUC 0.6188、ECE 0.0063</strong>，相对 DIN+MM 的 GAUC 提升约 <strong>0.55pp</strong>。去掉 SimTier 后约 <strong>−0.45pp</strong>；Scaling 对照最好仅 <strong>+0.05pp</strong>。二者一起说明：涨点来自检索与多模态 ESU，而不是“换更深 Transformer”。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/long-sequence-gauc-by-histlen.png" alt="按历史长度切片的 TriGate GAUC" width="1200" height="700">
-  <figcaption>图 4 · 历史长度切片。更长行为用户绝对 GAUC 更高，支撑长序列建模价值；这是主模型绝对切片，不是相对基线的分桶 uplift。</figcaption>
+  <figcaption>图 5 · 历史长度切片。更长行为用户绝对 GAUC 更高，支撑长序列建模价值；这是主模型绝对切片，不是相对基线的分桶 uplift。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/long-sequence-topk-gauc-latency.png" alt="top-k 与 GAUC、GSU 延迟的权衡" width="1200" height="700">
-  <figcaption>图 5 · top-k 与延迟权衡。同 checkpoint 推理扫描中，$K=80$ 到 $120$ 仍有增益；GSU 瓶颈主要在多模态 soft 检索。</figcaption>
+  <figcaption>图 6 · top-k 与延迟权衡。同 checkpoint 推理扫描中，$K=80$ 到 $120$ 仍有增益；GSU 瓶颈主要在多模态 soft 检索。</figcaption>
 </figure>
 <p><strong>面试表达建议：</strong>先讲 TriGate 门控分工与 SimTier 消融，再用 Scaling 对照回答“为什么不直接上更深骨干”。不要宣称官方全量 SOTA、线上 A/B，或打赢生产级 OneTrans/RankMixer。</p>
 
