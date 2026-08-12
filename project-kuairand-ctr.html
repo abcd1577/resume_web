@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>基于 KuaiRand 的长序列 CTR 建模与曝光去偏 · 侯奇瑞</title>
+  <meta name="description" content="KuaiRand 上长序列建模（SIM 双通道 / SIGKDD 特征 / Scaling）与 Debias-in-Retrieval（RPD / PA-GSU / Bias-Gate）并重的个人项目报告。" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
+  <script defer src="assets/vendor/katex/katex.min.js"></script>
+  <script defer src="assets/vendor/katex/auto-render.min.js"></script>
+  <script>
+    var __mathRendered = false;
+    function renderAllMath() {
+      if (__mathRendered || !window.renderMathInElement) return;
+      __mathRendered = true;
+      window.renderMathInElement(document.body, {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "\\[", right: "\\]", display: true },
+          { left: "$", right: "$", display: false },
+          { left: "\\(", right: "\\)", display: false }
+        ],
+        ignoredTags: ["script", "noscript", "style", "textarea", "pre", "code"],
+        throwOnError: false
+      });
+    }
+    document.addEventListener("DOMContentLoaded", renderAllMath);
+    window.addEventListener("load", renderAllMath);
+  </script>
+</head>
+<body>
+  <nav class="nav project-nav"><a href="index.html" class="logo">Qirui Hou.</a><ul><li><a href="index.html#experience">返回实习经历</a></li><li><a href="index.html#projects">全部项目</a></li></ul><button id="themeToggle" aria-label="切换主题">🌙</button></nav>
+  <main class="project-library single-project">
+    <article class="project-report">
+    <header class="report-header">
+      <p class="report-kicker">06 · 个人项目 / 独立完成</p>
+      <h1>基于 KuaiRand 的长序列 CTR 建模与曝光去偏</h1>
+      <p class="report-summary">长序列建模与曝光去偏同等重要：用 KuaiRand 真随机曝光统一报告 test_std / test_rand / gap；长序列侧落地 SIM 双通道与特征增强，去偏侧用 RPD / PA-GSU / Bias-Gate 证明检索层去偏优于纯 IPS。</p>
+      <dl class="report-metrics">
+        <div>
+          <dt>双通道 test_rand</dt>
+          <dd>0.721</dd>
+        </div>
+        <div>
+          <dt>双通道 gap（3 ep）</dt>
+          <dd>−0.034</dd>
+        </div>
+        <div>
+          <dt>gate_q50 \|gap\|（1 ep）</dt>
+          <dd>−0.036</dd>
+        </div>
+      </dl>
+    </header>
+
+<h2 id="situation">项目背景｜超长行为用不完，有偏 AUC 又会虚高</h2>
+<p>工业 CTR 面临两件同时成立的事：行为序列可到万级，全历史 attention 算力不可承受；推荐日志又有曝光偏置，只看标准流量 AUC 容易虚高。本项目基于公开集 KuaiRand，用真随机曝光 <code>is_rand</code> 强制报告 <code>test_std</code> / <code>test_rand</code> / <code>gap</code>（越好 = \|gap\| 越小），并划分 Pure（因果协议）与 1K（长历史检索）双赛道；倾向估计使用无泄漏的 <code>cal_rand</code> 切分。</p>
+
+<h2 id="task">项目目标｜长序列利用率与无偏稳健性并重</h2>
+<p>目标不是单刷有偏 AUC，而是在同一裁判下同时回答：如何把超长历史用起来（SIM / 双通道 / 特征 / scaling），以及如何避免「更强匹配更贴热门」（损失去偏对照 → 检索层去偏）。两条线同等重要，互相支撑。</p>
+
+<h2 id="action">技术路径｜双通道长序列 + Debias-in-Retrieval</h2>
+<p><strong>长序列建模。</strong> 落地 SIM 两阶段 GSU+ESU：硬匹配 tag/author 与软余弦检索把窗长压缩到 top-k，再 DIN 精算。提出 recent⊕semantic <strong>双通道</strong>——近因保底、检索补长尾。对照 TWIN 式检索-打分一致性，以及 OneTrans / RankMixer / HyFormer 紧凑 scaling。特征侧迁移 SIGKDD 风格 dense EMA、match、gated tail residual、pairwise rank loss 与 tail aux 等，作为特征工程能力与结构线对照。</p>
+<p><strong>曝光去偏。</strong> Pure 与强 dual 骨干上系统对照 IPS/SNIPS/RandCal，发现损失重加权几乎拉不开。据此提出 Debias-in-Retrieval：用自定义 RPD（检索流行度相对窗口 / 随机曝光的 KL）诊断 GSU 选择是否跟随偏热窗口；在检索层做 PA-GSU（分层配额 / 稀有度加分），在融合层做 Bias-Gate（目标流行度桶 ⊕ 17 维检索元特征门控两路兴趣）。</p>
+<figure>
+  <img decoding="async" src="assets/kuairand-std-rand-scatter.png" alt="KuaiRand 实验 test_std 与 test_rand 散点：能力与无偏权衡" width="1200" height="900" fetchpriority="high" loading="eager">
+  <figcaption>图 1 · test_std vs test_rand。右上更强，靠近对角线更稳健；软检索 / 大模型常抬 std 但偏离无偏。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-rpd-bars-1k.png" alt="1K 赛道 RPD 诊断柱状图" width="1200" height="800">
+  <figcaption>图 2 · RPD 诊断（1K）。窗口相对随机曝光已偏热；常规检索常跟随窗口；配额温和降温，稀有度过激会拧断分布。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-ablation-bars.png" alt="Debias-in-Retrieval 消融总览" width="1200" height="800">
+  <figcaption>图 3 · 通宵消融总览。gate×配额偏向收窄 \|gap\|；soft/meta 更易抬绝对 AUC。</figcaption>
+</figure>
+
+<p>RPD 的核心量可写为：</p>
+<p>$$
+\mathrm{RPD}_{win}=\mathrm{KL}(P_{ret}\|P_{win}),\quad
+\mathrm{RPD}_{rand}=\mathrm{KL}(P_{ret}\|P_{rand})
+$$</p>
+
+<h2 id="result">项目结果｜能力锚点与去偏同协议冠军</h2>
+<p>长序列侧：1K 双通道 <code>sim_1k_dual_multi</code> 取得 rand <strong>0.721</strong>、gap <strong>−0.034</strong>（3 epoch），为历史无偏联合最优锚点；SIGKDD 特征线抬 val，但 gap −0.054，说明结构用长历史优于只堆特征。去偏侧：通宵同协议（1K@1 ep）下 <code>gate_q50</code> 取得最佳 \|gap\| <strong>−0.036</strong>；<code>gate_meta</code> / soft rare 绝对 AUC 更高但 gap 不收——提分件 ≠ 对齐件。</p>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-gap-barh.png" alt="各实验 gap 横向对比" width="1200" height="900">
+  <figcaption>图 4 · gap 横向对比。越接近 0 越稳健；须在同 epoch / 同赛道内解读。</figcaption>
+</figure>
+<p><strong>诚实边界：</strong> 公开数据离线实验，无线上 A/B；Pure 与 1K 绝对值不横比；通宵 1-ep 冠军未超过 3-ep 双通道锚点；Pure 短序列上检索干预空间有限；未跑全因子 <code>gate_q50_meta</code> 等交叉。</p>
+
+    </article>
+  </main>
+  <footer><p>© 2026 侯奇瑞 · 项目报告依据《06 KuaiRand 长序列与去偏 · 简历版》整理</p></footer>
+  <script src="script.js"></script>
+</body>
+</html>
