@@ -316,9 +316,9 @@
       <article class="case-card featured">
         <p class="case-no">06 · 长序列 ∥ 去偏</p>
         <h3>基于 KuaiRand 的长序列 CTR 建模与曝光去偏</h3>
-        <p class="case-summary">双通道 recent⊕semantic 达 rand 0.721 / gap −0.034（3 ep）；Debias-in-Retrieval：RPD 诊断 + PA-GSU + Bias-Gate，通宵同协议 gate×配额最佳 \|gap\| −0.036。SIGKDD 特征与 OneTrans scaling 作对照；主看 test_rand 与 \|gap\|。</p>
-        <div class="metric-row"><div><strong>0.721</strong><span>test_rand</span></div><div><strong>−0.034</strong><span>gap · 3ep</span></div><div><strong>−0.036</strong><span>gate_q50 \|gap\|</span></div></div>
-        <div class="tags"><span>双通道 SIM</span><span>SIGKDD 特征</span><span>RPD</span><span>PA-GSU</span><span>Bias-Gate</span></div>
+        <p class="case-summary">长序列侧走完 SASRec → DIN → DIEN（负结果）→ SIM 两阶段 → 双通道 recent⊕semantic → TWIN → OneTrans / RankMixer / HyFormer 共 12 级阶梯，并迁移 SIGKDD 风格特征与多损失；双通道达 rand 0.721 / gap −0.034（3 ep），OneTrans-L 标出 std 0.769 上限。去偏侧 Debias-in-Retrieval：RPD 诊断 + PA-GSU + Bias-Gate，通宵同协议 gate×配额最佳 |gap| −0.036。主看 test_rand 与 |gap|。</p>
+        <div class="metric-row"><div><strong>0.721</strong><span>test_rand</span></div><div><strong>−0.034</strong><span>gap · 3ep</span></div><div><strong>−0.036</strong><span>gate_q50 |gap|</span></div></div>
+        <div class="tags"><span>DIN→HyFormer</span><span>双通道 SIM</span><span>TWIN 一致性</span><span>SIGKDD 特征与损失</span><span>RPD</span><span>PA-GSU</span><span>Bias-Gate</span></div>
         <a class="case-link" href="project-kuairand-ctr.html">查看完整项目报告 <span>→</span></a>
       </article>
     </div>
