@@ -68,6 +68,11 @@
     <tr><td><code>gap = test_rand − test_std</code></td><td><strong>越好 = |gap| 越小（越接近 0）</strong></td></tr>
   </tbody>
 </table>
+<p>形式化写作：</p>
+<p>$$
+\mathrm{gap}=\mathrm{AUC}_{rand}-\mathrm{AUC}_{std},\qquad
+\mathrm{稳健性目标}=\min\big|\mathrm{gap}\big|
+$$</p>
 <p>并划分两条赛道：<strong>Pure</strong>（约 2.7 万用户，短序列为主，做因果与损失去偏协议）与 <strong>1K</strong>（1000 用户、百万 item、长历史，做检索与 scaling）。两条赛道<strong>绝对值不横比</strong>，比较数字必须注明 epoch。倾向估计使用无泄漏的 <code>cal_rand</code> 切分：从随机曝光里单独切校准集，与 holdout 不相交，不进训练、不用点击标签。</p>
 <figure>
   <img decoding="async" src="assets/kuairand-lane-distribution.png" alt="Pure 与 1K 两条赛道的指标分布对比" width="1200" height="800" fetchpriority="high" loading="eager">
@@ -159,8 +164,16 @@ $$</p>
 </figure>
 
 <h4>⑤ → ⑥ SIM 两阶段与双通道结构创新</h4>
-<p>GSU 先从最长 10000 条历史中检索 top-50，ESU 只对子序列做 DIN 精算，复杂度从 \(O(L)\) 降到「检索 + \(O(K)\)」。检索分两路实现：<strong>硬 GSU</strong> 按 tag / author 匹配，优先级 both &gt; tag_only &gt; author_only；<strong>软 GSU</strong> 用特征余弦在长窗内打分取 top-k。</p>
-<p>单路检索的问题是「非近即远」：只看 recent 会丢长尾兴趣，只看 semantic 可能丢近因或引入噪声。因此提出<strong>双通道</strong>——两路兴趣并行，检索只追加不替换近因，五路拼接进 MLP：</p>
+<p>GSU 先从最长 \(L=10000\) 条历史中检索 top-\(K=50\)，ESU 只对子序列做 DIN 精算，复杂度从 \(O(L)\) 降到「检索 + \(O(K)\)」。硬 GSU 按 tag/author 匹配；软 GSU 用特征余弦在长窗内打分：</p>
+<p>$$
+\mathrm{rel}(i,t)=\frac{\mathbf{e}_i^\top\mathbf{e}_t}{\|\mathbf{e}_i\|\,\|\mathbf{e}_t\|},\qquad
+\mathcal{H}_{\mathrm{ret}}=\mathrm{TopK}_{i\in\mathcal{H}}\big(\mathrm{rel}(i,t)\big)
+$$</p>
+<p>单路检索的问题是「非近即远」：只看 recent 会丢长尾兴趣，只看 semantic 可能丢近因或引入噪声。因此提出<strong>双通道</strong>——两路兴趣并行，检索只追加不替换近因：</p>
+<p>$$
+interest_{rec}=\mathrm{Attn}(\mathcal{H}_{recent},t),\qquad
+interest_{ret}=\mathrm{Attn}(\mathcal{H}_{ret},t)
+$$</p>
 <p>$$
 x=[\,interest_{ret},\ interest_{rec},\ target,\ interest_{ret}\times target,\ interest_{rec}\times target,\ side\,]
 $$</p>
@@ -175,14 +188,33 @@ $$</p>
 </figure>
 
 <h4>⑧ TWIN：把一致性当成目的</h4>
-<p>两阶段的隐患是 GSU 与 ESU 的「相关」不是同一套标准：按 author 硬筛出来的一批，ESU 的注意力可能更看 tag 与时效，等于筛错了。TWIN 用同一打分函数贯穿检索与聚合。我做的消融很直接：<code>dot</code> ESU（检索与聚合同函数）gap −0.044，换成 <code>mlp</code> ESU 后掉到 −0.051。<strong>一致性本身就是收益，不是「换个更强检索」。</strong></p>
+<p>两阶段的隐患是 GSU 与 ESU 的「相关」不是同一套标准：按 author 硬筛出来的一批，ESU 的注意力可能更看 tag 与时效，等于筛错了。TWIN 要求检索打分与聚合打分共用同一函数 \(s(\cdot)\)：</p>
+<p>$$
+\mathcal{H}_{ret}=\mathrm{TopK}_{i\in\mathcal{H}}\big(s(e_i,e_t)\big),\qquad
+interest=\sum_{i\in\mathcal{H}_{ret}}\alpha_i\,e_i,\quad
+\alpha_i\propto\exp\big(s(e_i,e_t)\big)
+$$</p>
+<p>消融很直接：\(s=\mathrm{dot}\) 时 gap −0.044；换成 \(s=\mathrm{mlp}\)（检索与聚合不一致）掉到 −0.051。<strong>一致性本身就是收益，不是「换个更强检索」。</strong></p>
 
 <h4>⑨⑩⑪ 统一架构与 scaling 对照</h4>
 <p>前面所有方案都是「先序列、后交叉」，只在打分层融合。三类统一架构把这层隔离打掉：</p>
 <ul>
-  <li><strong>OneTrans</strong>：历史逐条成 S-token，用户画像与候选切成多个 NS-token，拼成 \([S_1..S_L, NS_1..NS_{ns}]\) 走因果 Transformer；末尾 NS 能 attend 全部历史，等价于用多层注意力做 target-aware 聚合。对 S-token 与各 NS-token 用 <strong>Mixed 参数化</strong>（行为同质、画像/候选异质），最后取全部 NS 输出拼接打分。</li>
-  <li><strong>RankMixer Lite</strong>：把序列压成 8 个 token，每层做多头 token-mixing + 每 token 独立 FFN。</li>
-  <li><strong>HyFormer Lite</strong>：用可学习 query 把长历史压成 4 个 summary token，再与候选侧做 cross-attention。</li>
+  <li><strong>OneTrans</strong>：历史逐条成 S-token，用户画像与候选切成多个 NS-token，拼成因果序列
+    $$
+    \mathbf{Z}=[S_1,\ldots,S_L,\,NS_1,\ldots,NS_{n_s}]
+    $$
+    末尾 NS 可 attend 全部历史。对 S-token 与各 NS-token 用 <strong>Mixed 参数化</strong>（行为同质、画像/候选异质），取全部 NS 输出拼接打分：
+    $$
+    \hat y=\mathrm{MLP}\big([\,h_{NS_1},\ldots,h_{NS_{n_s}}\,]\big)
+    $$
+  </li>
+  <li><strong>RankMixer Lite</strong>：把序列压成 \(N=8\) 个 token，每层做多头 token-mixing + 每 token 独立 FFN。</li>
+  <li><strong>HyFormer Lite</strong>：用 \(Q\) 个可学习 query 把长历史压成 summary token，再与候选侧做 cross-attention：
+    $$
+    \mathbf{C}=\mathrm{softmax}\!\left(\frac{Q K_{hist}^\top}{\sqrt{d}}\right)V_{hist},\qquad
+    h=\mathrm{CrossAttn}(\mathbf{C},\,e_t)
+    $$
+  </li>
 </ul>
 <p>结论有点反直觉但很重要：OneTrans-L 把 val / std 拉到全项目最高（std 0.769），<strong>gap 却更差（−0.050）</strong>——参数量与全局交互让它更贴标准曝光分布。RankMixer 的 token-mix 结构偏置对 rand 更友好（gap −0.043）。<strong>scaling 抬得动能力上限，抬不动无偏稳健性。</strong></p>
 <figure>
@@ -199,32 +231,57 @@ $$</p>
 <p>$$
 logit=logit_{base}+\alpha\cdot\sigma\big(gate(h,\ interest_{attn},\ meta)\big)\cdot tail\_residual(\cdot)
 $$</p>
-<p><strong>特征侧</strong>：dense 统计特征做 EMA 平滑（避免单批统计抖动）、match 特征（历史与候选的匹配度显式化）、<code>interest_mean</code> 与注意力兴趣并存（池化方式互补）。</p>
-<p><strong>损失侧</strong>是这条线的重点，四项叠加：</p>
-<table>
-  <thead><tr><th>损失项</th><th>作用</th></tr></thead>
-  <tbody>
-    <tr><td>BCE</td><td>主点击目标</td></tr>
-    <tr><td>Label smoothing（ε≈0.003）</td><td>软化 0/1 硬标签，缓解噪声点击带来的过置信</td></tr>
-    <tr><td>Pairwise rank loss</td><td>直接优化「正样本分高于负样本」，与 AUC 目标对齐</td></tr>
-    <tr><td>Tail aux loss</td><td>约束高分段残差修正幅度，防止长尾支路乱改分</td></tr>
-  </tbody>
-</table>
+<p><strong>特征侧</strong>：dense 统计特征做 EMA 平滑（避免单批统计抖动）、match 特征（历史与候选的匹配度显式化）、<code>interest_mean</code> 与注意力兴趣并存（池化方式互补）：</p>
+<p>$$
+f_t=\beta f_{t-1}+(1-\beta)x_t,\qquad
+interest_{mean}=\frac{1}{|\mathcal{H}|}\sum_{i\in\mathcal{H}}e_i
+$$</p>
+<p><strong>损失侧</strong>四项叠加。记点击标签 \(y\in\{0,1\}\)、预测概率 \(\hat y=\sigma(logit)\)，软标签 \(y^\varepsilon=y(1-\varepsilon)+\varepsilon/2\)（\(\varepsilon\approx 0.003\)）：</p>
+<p>$$
+\begin{aligned}
+\mathcal{L}_{\mathrm{BCE}}
+&= -\big[y^\varepsilon\log\hat y+(1-y^\varepsilon)\log(1-\hat y)\big]
+\quad\text{（Label smoothing，}\varepsilon\approx 0.003\text{）} \\[4pt]
+\mathcal{L}_{\mathrm{rank}}
+&= \log\big(1+\exp(-(s_+-s_-))\big)
+\quad\text{（Pairwise rank loss）} \\[4pt]
+\mathcal{L}_{\mathrm{tail}}
+&= \mathbb{E}\big[\|\Delta_{\mathrm{tail}}\|_2^2\cdot\mathbf{1}_{\{\hat y>\tau\}}\big]
+\quad\text{（Tail aux loss）} \\[4pt]
+\mathcal{L}
+&= \mathcal{L}_{\mathrm{BCE}}+\lambda_r\mathcal{L}_{\mathrm{rank}}+\lambda_t\mathcal{L}_{\mathrm{tail}}
+\end{aligned}
+$$</p>
 <p>结果：val 0.747 / std 0.750 / rand 0.697 / gap −0.054。<strong>特征工程 + 多损失确实能抬 val，但 gap 不如结构型的双通道。</strong>这条线在简历里的定位是「我有完整特征与损失工程能力，并且知道它在这个问题上的边界」，不是无偏最优路线。</p>
+<p>ESU 注意力还可加温度 \(\tau\) 或 Softplus 归一化（收益边际）：</p>
+<p>$$
+\alpha_i=\frac{\exp(a_i/\tau)}{\sum_j\exp(a_j/\tau)}
+\quad\text{或}\quad
+\alpha_i=\frac{\mathrm{softplus}(a_i)}{\sum_j\mathrm{softplus}(a_j)}
+$$</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-attn-temp-sweep.png" alt="注意力温度与 Softplus 归一化扫参" width="1200" height="800">
   <figcaption>图 11 · 注意力温度 τ / Softplus 归一化扫参。属于收益边际的 trick——试过、量化过、诚实说明收益有限。</figcaption>
 </figure>
 
 <h3>二、曝光去偏：Debias-in-Retrieval</h3>
-<p>先做损失层对照。Pure 上 DIN 加 IPS（\(w=1/\hat p_i\)）、SNIPS（自归一化）、RandCal（用 <code>is_rand</code> 分桶校准倾向），gap 全部落在 −0.096 ～ −0.097，<strong>几乎拉不开</strong>；换到 1K 的强双通道骨干上再加 IPS，rand 从 0.721 掉到 0.716，<strong>反而略伤</strong>。另外 MTL（click + long_view 共享塔双头）也没改善 gap。</p>
+<p>先做损失层对照。记倾向 \(\hat p_i=\widehat{\Pr}(\mathrm{expose}=1\mid i)\)，经典重加权写为：</p>
+<p>$$
+\mathcal{L}_{\mathrm{IPS}}=\mathbb{E}\!\left[\frac{1}{\hat p_i}\,\ell(y,\hat y)\right],\qquad
+\mathcal{L}_{\mathrm{SNIPS}}=\frac{\mathbb{E}\!\left[\hat p_i^{-1}\ell(y,\hat y)\right]}{\mathbb{E}\!\left[\hat p_i^{-1}\right]}
+$$</p>
+<p>Pure 上 DIN 加 IPS / SNIPS / RandCal，gap 全部落在 −0.096 ～ −0.097，<strong>几乎拉不开</strong>；换到 1K 的强双通道骨干上再加 IPS，rand 从 0.721 掉到 0.716，<strong>反而略伤</strong>。另外旧 MTL（click + long_view 共享塔双头）也没改善 gap。</p>
 <p>机制解释：损失层只缩放梯度，模型看到的还是同一批偏热门的历史证据，强骨干能通过表征把权重「学回来」。而 GSU 的 top-k 是<strong>离散选择</strong>——改了候选集，下游无法学回来。据此提出命题：<strong>曝光偏置的主要放大器是长序列检索的 GSU 选择阶段，而不是损失函数。</strong></p>
 
 <h4>诊断创新：RPD</h4>
-<p>按训练期曝光计数把 item 分成 10 个流行度桶，比较三个分布：检索出的子序列 \(P_{ret}\)、窗口内全部历史 \(P_{win}\)、随机曝光池 \(P_{rand}\)：</p>
+<p>按训练期曝光计数把 item 分成 10 个流行度桶 \(b\in\{1,\ldots,10\}\)，比较三个分布：检索出的子序列 \(P_{ret}\)、窗口内全部历史 \(P_{win}\)、随机曝光池 \(P_{rand}\)。KL 展开为：</p>
+<p>$$
+\mathrm{KL}(P\|Q)=\sum_{b=1}^{10} P(b)\log\frac{P(b)}{Q(b)+\varepsilon}
+$$</p>
 <p>$$
 \mathrm{RPD}_{win}=\mathrm{KL}\big(P_{ret}\,\|\,P_{win}\big),\qquad
-\mathrm{RPD}_{rand}=\mathrm{KL}\big(P_{ret}\,\|\,P_{rand}\big)
+\mathrm{RPD}_{rand}=\mathrm{KL}\big(P_{ret}\,\|\,P_{rand}\big),\qquad
+\mathrm{head\_share}=\sum_{b\in\mathrm{Head}}P(b)
 $$</p>
 <p>1K 上的关键发现：<strong>窗口本身就偏热</strong>（head_share 约 0.65，随机曝光约 0.50）；常规硬/软检索的 \(\mathrm{RPD}_{win}\approx 0\) 但 \(\mathrm{RPD}_{rand}\) 仍很大——<strong>检索并没有额外作恶，它只是忠实地跟着已经偏热的窗口走</strong>。这个量不需要训练就能算，成本近乎为零。</p>
 <figure>
@@ -250,12 +307,26 @@ $$</p>
 
 <h4>方法：PA-GSU 与 Bias-Gate</h4>
 <p>三个互不冲突的干预层：<strong>配额改「选谁」，门控改「怎么融」，元特征改「CTR 头看见什么」</strong>。</p>
-<ul>
-  <li><strong>PA-GSU quota</strong>：限制 top-k 中来自头部桶的条数上限 \(\lceil q\cdot k\rceil\)，剩余名额按原相关度从更冷桶补齐；硬检索路径下配额在每个语义优先级层内生效，不破坏 both &gt; tag &gt; author 的顺序。</li>
-  <li><strong>PA-GSU rarity</strong>：软路径上给稀有度加分（注意是稀有度，不是流行度），\(z(\cdot)\) 为窗口内标准化以消除量纲差：
-    <br>$$ s'(i)=\mathrm{rel}(i,t)+\lambda\cdot z\big(\log(1/\hat p_i)\big) $$</li>
-  <li><strong>Bias-Gate</strong>：把目标流行度桶 embedding 与 17 维检索元特征拼成 <code>pop_meta</code>，学一个门控分别缩放两路兴趣，\(gate=\sigma(\mathrm{MLP}(pop\_meta))\to[g_{ret},g_{rec}]\)；gate bias 初始化到 ≈3 使 σ≈0.95，<strong>近恒等启动</strong>保证向后兼容。元特征含检索/语义命中比、检索与窗口的 log 流行度及其 drift、分数熵与 10 桶直方图。</li>
-</ul>
+<p><strong>PA-GSU quota</strong>：限制 top-\(k\) 中来自头部桶的条数上限，余额按原相关度从更冷桶补齐：</p>
+<p>$$
+\big|\{i\in\mathcal{H}_{ret}: b(i)\in\mathrm{Head}\}\big|\le\lceil q\cdot k\rceil,\qquad q\in\{0.3,0.5,0.7,1.0\}
+$$</p>
+<p>硬检索路径下配额在每个语义优先级层内生效，不破坏 both &gt; tag &gt; author 的顺序。</p>
+<p><strong>PA-GSU rarity</strong>：软路径上给稀有度加分（注意是稀有度，不是流行度），\(z(\cdot)\) 为窗口内标准化以消除量纲差：</p>
+<p>$$
+s'(i)=\mathrm{rel}(i,t)+\lambda\cdot z\big(\log(1/\hat p_i)\big),\qquad
+z(u)=\frac{u-\mu_{\mathcal{H}}}{\sigma_{\mathcal{H}}+\varepsilon}
+$$</p>
+<p><strong>Bias-Gate</strong>：把目标流行度桶 embedding 与 17 维检索元特征拼成门控输入，分别缩放两路兴趣：</p>
+<p>$$
+\begin{aligned}
+pop\_meta &= \big[\mathrm{Emb}(b_t)\,\|\,\mathrm{meta\_vec}_{17}\big] \\
+[g_{ret},g_{rec}] &= \sigma\big(\mathrm{MLP}(pop\_meta)\big) \\
+\widetilde{interest}_{ret} &= g_{ret}\cdot interest_{ret},\qquad
+\widetilde{interest}_{rec}=g_{rec}\cdot interest_{rec}
+\end{aligned}
+$$</p>
+<p>gate bias 初始化到 ≈3 使 \(\sigma\approx 0.95\)，<strong>近恒等启动</strong>保证向后兼容。元特征含检索/语义命中比、检索与窗口的 log 流行度及其 drift、分数熵与 10 桶直方图。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-quota-sweep.png" alt="配额 q 扫参" width="1200" height="800">
   <figcaption>图 17 · 配额 q 扫参。q 从 1.0 收到 0.3，gap 单调略好（约 0.2pp）——旋钮有效但不是银弹。</figcaption>
@@ -270,7 +341,61 @@ $$</p>
 </figure>
 
 <h3 id="mtl">三、多任务时长：CTR + 观看时长 MTL</h3>
-<p>工业推荐不止优化「点不点」，还要优化「看多久」。本线在 KuaiRand 上做双任务：CTR（<code>is_click</code>）+ 观看时长（<code>play_time_ms</code>）。结构扫 Shared / MMoE / PLE；时长损失扫 WLL / WLL-Norm / CREAD / Distill / Distill-EMD 等；任务权重用 Uncertainty Weighting；TimeTrans 分位桶仅在 train 拟合。注意：旧实验「click + long_view 双头」只作过 gap 对照且未改善无偏——与本线的工业 watch-time MTL <strong>不是同一条实验</strong>。</p>
+<p>工业推荐不止优化「点不点」，还要优化「看多久」。本线在 KuaiRand 上做双任务：CTR（<code>is_click</code>）+ 观看时长（<code>play_time_ms</code>）。结构扫 Shared / MMoE / PLE；时长损失扫 WLL / WLL-Norm / CREAD / Distill / Distill-EMD 等；TimeTrans 分位桶仅在 train 拟合。注意：旧实验「click + long_view 双头」只作过 gap 对照且未改善无偏——与本线的工业 watch-time MTL <strong>不是同一条实验</strong>。</p>
+
+<p>总损失用 Kendall <strong>Uncertainty Weighting</strong> 自适应平衡两任务。记 CTR 损失 \(\mathcal{L}_c\)、时长损失 \(\mathcal{L}_w\)，可学习噪声参数 \(s_c,s_w\)：</p>
+<p>$$
+\mathcal{L}_{\mathrm{MTL}}=e^{-s_c}\mathcal{L}_c+s_c+e^{-s_w}\mathcal{L}_w+s_w
+$$</p>
+<p>CTR 侧仍用 BCE + label smoothing（\(\varepsilon\approx 0.003\)）。时长侧三种关键目标如下。</p>
+
+<p><strong>① WLL-Norm（偏秒数点估计）</strong>  
+单 logit \(z\)；用 TimeTrans 把播放时长归一化到 \(\hat t\in[0,1]\)，令 \(p=\tfrac12\sigma(z)\)：</p>
+<p>$$
+\mathcal{L}_{\mathrm{WLL\text{-}Norm}}=-\hat t\log p-\log(1-p),\qquad
+\hat t=\mathrm{TimeTrans.encode}(play\_time)
+$$</p>
+<p>还原秒数时再 \(\mathrm{TimeTrans.decode}(\cdot)\)。1K 上 MMoE+WLL-Norm 将 MAE 压到 <strong>5.41s</strong>。</p>
+
+<p><strong>② CREAD（偏生存 / 时长排序）</strong>  
+把时长轴切成 \(m\) 个阈值桶阈值 \(\{t_i\}_{i=1}^{m}\)（仅 train 拟合）。每个桶一个 sigmoid 头，标签为「是否活过该阈值」：</p>
+<p>$$
+y_i=\mathbf{1}(y>t_i),\qquad
+\hat p_i=\sigma(z_i),\qquad
+\mathcal{L}_{\mathrm{surv}}=-\sum_{i=1}^{m}\big[y_i\log\hat p_i+(1-y_i)\log(1-\hat p_i)\big]
+$$</p>
+<p>再加还原秒数的 Huber 与相邻桶单调惩罚：</p>
+<p>$$
+\begin{aligned}
+\hat y_{\mathrm{sec}}&=\sum_{i=1}^{m}\hat p_i\cdot\Delta t_i \\
+\mathcal{L}_{\mathrm{CREAD}}
+&=\mathcal{L}_{\mathrm{surv}}+\lambda_h\,\mathrm{Huber}(\hat y_{\mathrm{sec}},y_{\mathrm{sec}})+\lambda_m\sum_{i}[\hat p_{i+1}-\hat p_i]_+
+\end{aligned}
+$$</p>
+<p>Shared+CREAD 在 1K 上同时拿到全局 AUC <strong>0.7148</strong> 与时长 XAUC <strong>0.6242</strong>——综合首选。</p>
+
+<p><strong>③ Distill-EMD（偏分布匹配）</strong>  
+\(m\) 维 softmax 输出离散分布 \(\hat{\mathbf{p}}\)；用 Laplace 核把真实时长做成软标签 \(\mathbf{q}\)，再对 CDF 做平方 EMD：</p>
+<p>$$
+\begin{aligned}
+\mathcal{L}_{\mathrm{CE}}&=-\sum_{i=1}^{m}q_i\log\hat p_i \\
+F_i&=\sum_{j\le i}\hat p_j,\quad G_i=\sum_{j\le i}q_j \\
+\mathcal{L}_{\mathrm{EMD}}&=\sum_{i=1}^{m}(F_i-G_i)^2 \\
+\mathcal{L}_{\mathrm{Distill\text{-}EMD}}&=\mathcal{L}_{\mathrm{CE}}+\lambda_e\mathcal{L}_{\mathrm{EMD}}
+\end{aligned}
+$$</p>
+<p>MMoE+Distill-EMD 取得最高 GAUC_w <strong>0.6045</strong>，但 MAE ≈23s——分布匹配抬了个性化 CTR 排序，秒数点估计却糊掉。</p>
+
+<p><strong>评测尺子</strong>（均在 <code>test_rand</code> 上报告）：</p>
+<p>$$
+\begin{aligned}
+\mathrm{GAUC}_w&=\sum_u w_u\,\mathrm{AUC}_u,\quad w_u\propto n_u \\
+\mathrm{XAUC}&=\Pr\!\big(\hat y_i>\hat y_j\mid y_i>y_j\big) \\
+\mathrm{MAE}&=\mathbb{E}\big[|\hat y_{\mathrm{sec}}-y_{\mathrm{sec}}|\big]
+\end{aligned}
+$$</p>
+<p>其中 GAUC_w 是按用户平均的点击排序（个性化 CTR）；XAUC 是时长 pairwise 排序一致性；MAE 是秒数绝对误差。「利于 CTR 排序」= AUC/GAUC 高，<strong>≠</strong> 线上点击率最高。</p>
+
 <table>
   <thead><tr><th>目标（test_rand）</th><th>1K 冠军</th><th>关键数字</th></tr></thead>
   <tbody>
@@ -280,7 +405,6 @@ $$</p>
     <tr><td>时长误差（MAE）</td><td><strong>MMoE + WLL-Norm</strong></td><td><strong>5.41 s</strong></td></tr>
   </tbody>
 </table>
-<p>三种关键时长损失：<strong>WLL-Norm</strong> 偏秒数点估计；<strong>CREAD</strong>（\(m\) 个 sigmoid 生存桶）偏时长排序；<strong>Distill-EMD</strong>（软标签 + CDF EMD）偏分布匹配——利于 CTR 排序，秒数易糊。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pareto.png" alt="1K MTL 的 GAUC 与 XAUC Pareto 前沿" width="1200" height="800">
   <figcaption>图 20 · 1K Pareto（GAUC_w ↑ × XAUC ↑）。前沿三点：Distill-EMD、WLL-Norm、CREAD。</figcaption>
