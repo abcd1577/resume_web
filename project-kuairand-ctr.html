@@ -43,7 +43,7 @@
           <dd>0.721</dd>
         </div>
         <div>
-          <dt>gate_q50 |gap|</dt>
+          <dt>去偏最佳 |gap|</dt>
           <dd>−0.036</dd>
         </div>
         <div>
@@ -73,10 +73,10 @@
 \mathrm{gap}=\mathrm{AUC}_{rand}-\mathrm{AUC}_{std},\qquad
 \mathrm{稳健性目标}=\min\big|\mathrm{gap}\big|
 $$</p>
-<p>并划分两条赛道：<strong>Pure</strong>（约 2.7 万用户，短序列为主，做因果与损失去偏协议）与 <strong>1K</strong>（1000 用户、百万 item、长历史，做检索与 scaling）。两条赛道<strong>绝对值不横比</strong>，比较数字必须注明 epoch。倾向估计使用无泄漏的 <code>cal_rand</code> 切分：从随机曝光里单独切校准集，与 holdout 不相交，不进训练、不用点击标签。</p>
+<p>本项目在两个数据集上实验：一个约 2.7 万用户、短序列为主，用于因果与损失去偏；另一个 1000 用户、百万 item、长历史，用于检索与 scaling。倾向估计使用无泄漏的 <code>cal_rand</code> 切分：从随机曝光里单独切校准集，与 holdout 不相交，不进训练、不用点击标签。</p>
 <figure>
-  <img decoding="async" src="assets/kuairand-lane-distribution.png" alt="Pure 与 1K 两条赛道的指标分布对比" width="1200" height="800" fetchpriority="high" loading="eager">
-  <figcaption>图 1 · Pure / 1K 双赛道分布。两条赛道的绝对量级不同，只能在赛道内比较，这是后续所有结论的前提。</figcaption>
+  <img decoding="async" src="assets/kuairand-lane-distribution.png" alt="两个数据集的指标分布对比" width="1200" height="800" fetchpriority="high" loading="eager">
+  <figcaption>图 1 · 两个数据集的指标分布。绝对量级不同，只能在各自数据集内比较。</figcaption>
 </figure>
 
 <h2 id="task">项目目标｜长序列利用率、无偏稳健性与时长联合优化并重</h2>
@@ -85,26 +85,26 @@ $$</p>
 <h2 id="action">技术路径｜长序列阶梯 + Debias-in-Retrieval + CTR/时长 MTL</h2>
 
 <h3>一、长序列建模阶梯：从 SASRec 到 HyFormer</h3>
-<p>按「能力递进 + 每步都问 gap」的方式逐级搭建，共 12 类骨干。下表是完整阶梯与代表数字（1K 与 Pure 分别标注，勿横比）：</p>
+<p>按「能力递进 + 每步都问 gap」的方式逐级搭建，共 12 类骨干。下表是完整阶梯与代表数字：</p>
 <table>
   <thead>
-    <tr><th>阶段</th><th>模型</th><th>赛道 · ep</th><th>val</th><th>test_std</th><th>test_rand</th><th>gap</th><th>这一步学到什么</th></tr>
+    <tr><th>阶段</th><th>模型</th><th>val</th><th>test_std</th><th>test_rand</th><th>gap</th><th>这一步学到什么</th></tr>
   </thead>
   <tbody>
-    <tr><td>①</td><td>SASRec（因果自注意力）</td><td>Pure · 10</td><td>0.631</td><td>0.626</td><td>0.540</td><td>≈0</td><td>短截断 50 容量不足，作全项目 floor</td></tr>
-    <tr><td>②</td><td>DIN（target-aware LAU）</td><td>Pure · 10</td><td>0.709</td><td>0.678</td><td>0.574</td><td><strong>−0.104</strong></td><td>std 大涨但 rand 掉更多 → <strong>暴露曝光偏置</strong></td></tr>
-    <tr><td>③</td><td>DIN + 侧特征（item 融合）</td><td>Pure · 10</td><td>0.714</td><td>0.685</td><td>0.585</td><td>−0.100</td><td>tag/author 内容特征稳定增益</td></tr>
-    <tr><td>③</td><td>DIN + 侧特征</td><td>1K · 3</td><td>0.728</td><td>0.732</td><td>0.688</td><td>−0.044</td><td>1K 行为稠密，长历史场景天然更强</td></tr>
-    <tr><td>④</td><td>DIEN（GRU 演化 + aux loss）</td><td>Pure · 10</td><td>0.581</td><td>0.540</td><td>0.537</td><td>−0.003</td><td><strong>负结果</strong>：弱于 DIN，本数据跳过演化线</td></tr>
-    <tr><td>⑤</td><td>SIM 硬 GSU（tag+author）</td><td>1K · 3</td><td>0.742</td><td>0.741</td><td>0.701</td><td>−0.041</td><td>长窗检索有效；tag 比 author 更关键</td></tr>
-    <tr><td>⑥</td><td><strong>SIM 双通道 recent⊕semantic</strong></td><td>1K · 3</td><td>0.754</td><td>0.755</td><td><strong>0.721</strong></td><td><strong>−0.034</strong></td><td><strong>能力锚点</strong>：近因保底 + 检索补长尾</td></tr>
-    <tr><td>⑦</td><td>Soft GSU 双通道（余弦检索）</td><td>1K · 1</td><td>0.758</td><td>0.759</td><td>0.718</td><td>−0.041</td><td>软检索抬 std 却伤 gap → <strong>相关 ≠ 无偏</strong></td></tr>
-    <tr><td>⑧</td><td>TWIN CP-GSU（dot ESU）</td><td>1K · 1</td><td>0.730</td><td>0.732</td><td>0.688</td><td>−0.044</td><td>检索与打分一致性有价值</td></tr>
-    <tr><td>⑧</td><td>TWIN（mlp ESU，不一致）</td><td>1K · 1</td><td>0.725</td><td>0.725</td><td>0.674</td><td>−0.051</td><td>换头破坏一致性 → 明显更差</td></tr>
-    <tr><td>⑨</td><td>OneTrans-L（统一 tokenizer）</td><td>1K · 1</td><td>0.766</td><td><strong>0.769</strong></td><td>0.718</td><td>−0.050</td><td><strong>最高 std 档</strong>，但更贴有偏分布</td></tr>
-    <tr><td>⑩</td><td>RankMixer-L（token-mix）</td><td>1K · 1</td><td>0.757</td><td>0.760</td><td>0.717</td><td>−0.043</td><td>depth 有收益，gap 好于 OneTrans</td></tr>
-    <tr><td>⑪</td><td>HyFormer-L（query 压缩）</td><td>1K · 1</td><td>0.757</td><td>0.760</td><td>0.713</td><td>−0.047</td><td>历史压缩折中方案</td></tr>
-    <tr><td>⑫</td><td>SIGKDD DIN 特征增强</td><td>1K · 3</td><td>0.747</td><td>0.750</td><td>0.697</td><td>−0.054</td><td>特征 + 多 loss 抬 val，gap 不如结构型</td></tr>
+    <tr><td>①</td><td>SASRec（因果自注意力）</td><td>0.631</td><td>0.626</td><td>0.540</td><td>≈0</td><td>短截断 50 容量不足，作基线</td></tr>
+    <tr><td>②</td><td>DIN（target-aware LAU）</td><td>0.709</td><td>0.678</td><td>0.574</td><td><strong>−0.104</strong></td><td>std 大涨但 rand 掉更多 → <strong>暴露曝光偏置</strong></td></tr>
+    <tr><td>③</td><td>DIN + 侧特征（item 融合）</td><td>0.714</td><td>0.685</td><td>0.585</td><td>−0.100</td><td>tag/author 内容特征稳定增益</td></tr>
+    <tr><td>③</td><td>DIN + 侧特征（长历史）</td><td>0.728</td><td>0.732</td><td>0.688</td><td>−0.044</td><td>长历史场景行为稠密，天然更强</td></tr>
+    <tr><td>④</td><td>DIEN（GRU 演化 + aux loss）</td><td>0.581</td><td>0.540</td><td>0.537</td><td>−0.003</td><td><strong>负结果</strong>：弱于 DIN，跳过演化线</td></tr>
+    <tr><td>⑤</td><td>SIM 硬 GSU（tag+author）</td><td>0.742</td><td>0.741</td><td>0.701</td><td>−0.041</td><td>长窗检索有效；tag 比 author 更关键</td></tr>
+    <tr><td>⑥</td><td><strong>SIM 双通道 recent⊕semantic</strong></td><td>0.754</td><td>0.755</td><td><strong>0.721</strong></td><td><strong>−0.034</strong></td><td><strong>近因保底 + 检索补长尾</strong></td></tr>
+    <tr><td>⑦</td><td>Soft GSU 双通道（余弦检索）</td><td>0.758</td><td>0.759</td><td>0.718</td><td>−0.041</td><td>软检索抬 std 却伤 gap → <strong>相关 ≠ 无偏</strong></td></tr>
+    <tr><td>⑧</td><td>TWIN CP-GSU（dot ESU）</td><td>0.730</td><td>0.732</td><td>0.688</td><td>−0.044</td><td>检索与打分一致性有价值</td></tr>
+    <tr><td>⑧</td><td>TWIN（mlp ESU，不一致）</td><td>0.725</td><td>0.725</td><td>0.674</td><td>−0.051</td><td>换头破坏一致性 → 明显更差</td></tr>
+    <tr><td>⑨</td><td>OneTrans-L（统一 tokenizer）</td><td>0.766</td><td><strong>0.769</strong></td><td>0.718</td><td>−0.050</td><td><strong>最高 std</strong>，但更贴有偏分布</td></tr>
+    <tr><td>⑩</td><td>RankMixer-L（token-mix）</td><td>0.757</td><td>0.760</td><td>0.717</td><td>−0.043</td><td>depth 有收益，gap 好于 OneTrans</td></tr>
+    <tr><td>⑪</td><td>HyFormer-L（query 压缩）</td><td>0.757</td><td>0.760</td><td>0.713</td><td>−0.047</td><td>历史压缩折中方案</td></tr>
+    <tr><td>⑫</td><td>SIGKDD DIN 特征增强</td><td>0.747</td><td>0.750</td><td>0.697</td><td>−0.054</td><td>特征 + 多 loss 抬 val，gap 不如结构型</td></tr>
   </tbody>
 </table>
 <figure>
@@ -132,7 +132,7 @@ $$</p>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-sasrec-std-vs-rand.png" alt="SASRec 的 test_std 与 test_rand 对比" width="1200" height="800">
-  <figcaption>图 5 · SASRec 作为 floor。绝对值低，但 gap 反而小——说明「弱模型偏置也小」，不能只用 gap 单指标选模型。</figcaption>
+  <figcaption>图 5 · SASRec 作为基线。绝对值低，但 gap 反而小——说明「弱模型偏置也小」，不能只用 gap 单指标选模型。</figcaption>
 </figure>
 
 <h4>③ 特征工程：侧特征怎么进网络</h4>
@@ -177,7 +177,7 @@ $$</p>
 <p>$$
 x=[\,interest_{ret},\ interest_{rec},\ target,\ interest_{ret}\times target,\ interest_{rec}\times target,\ side\,]
 $$</p>
-<p>这是 1K 上 gap 最优的一类（−0.034）。有意思的是硬匹配 + 多标签 tag 比软余弦检索<strong>更保守也更无偏</strong>：软检索召回更全、排序更激进，对热门更友好，于是 std 高 1pt 但 gap 差 0.7pp。</p>
+<p>这是长历史数据上 gap 最优的一类（−0.034）。有意思的是硬匹配 + 多标签 tag 比软余弦检索<strong>更保守也更无偏</strong>：软检索召回更全、排序更激进，对热门更友好，于是 std 高 1pt 但 gap 差 0.7pp。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-auc-by-histlen.png" alt="按历史长度切片的 AUC" width="1200" height="800">
   <figcaption>图 8 · 按历史长度切片 AUC。长序列收益集中在中长桶，这是「检索有没有真的用上长历史」最直接的证据。</figcaption>
@@ -270,7 +270,7 @@ $$</p>
 \mathcal{L}_{\mathrm{IPS}}=\mathbb{E}\!\left[\frac{1}{\hat p_i}\,\ell(y,\hat y)\right],\qquad
 \mathcal{L}_{\mathrm{SNIPS}}=\frac{\mathbb{E}\!\left[\hat p_i^{-1}\ell(y,\hat y)\right]}{\mathbb{E}\!\left[\hat p_i^{-1}\right]}
 $$</p>
-<p>Pure 上 DIN 加 IPS / SNIPS / RandCal，gap 全部落在 −0.096 ～ −0.097，<strong>几乎拉不开</strong>；换到 1K 的强双通道骨干上再加 IPS，rand 从 0.721 掉到 0.716，<strong>反而略伤</strong>。另外旧 MTL（click + long_view 共享塔双头）也没改善 gap。</p>
+<p>在短序列数据集上 DIN 加 IPS / SNIPS / RandCal，gap 全部落在 −0.096 ～ −0.097，<strong>几乎拉不开</strong>；换到长历史数据集的强双通道骨干上再加 IPS，rand 从 0.721 掉到 0.716，<strong>反而略伤</strong>。另外旧 MTL（click + long_view 共享塔双头）也没改善 gap。</p>
 <p>机制解释：损失层只缩放梯度，模型看到的还是同一批偏热门的历史证据，强骨干能通过表征把权重「学回来」。而 GSU 的 top-k 是<strong>离散选择</strong>——改了候选集，下游无法学回来。据此提出命题：<strong>曝光偏置的主要放大器是长序列检索的 GSU 选择阶段，而不是损失函数。</strong></p>
 
 <h4>诊断创新：RPD</h4>
@@ -283,14 +283,14 @@ $$</p>
 \mathrm{RPD}_{rand}=\mathrm{KL}\big(P_{ret}\,\|\,P_{rand}\big),\qquad
 \mathrm{head\_share}=\sum_{b\in\mathrm{Head}}P(b)
 $$</p>
-<p>1K 上的关键发现：<strong>窗口本身就偏热</strong>（head_share 约 0.65，随机曝光约 0.50）；常规硬/软检索的 \(\mathrm{RPD}_{win}\approx 0\) 但 \(\mathrm{RPD}_{rand}\) 仍很大——<strong>检索并没有额外作恶，它只是忠实地跟着已经偏热的窗口走</strong>。这个量不需要训练就能算，成本近乎为零。</p>
+<p>长历史数据集上的关键发现：<strong>窗口本身就偏热</strong>（head_share 约 0.65，随机曝光约 0.50）；常规硬/软检索的 \(\mathrm{RPD}_{win}\approx 0\) 但 \(\mathrm{RPD}_{rand}\) 仍很大——<strong>检索并没有额外作恶，它只是忠实地跟着已经偏热的窗口走</strong>。这个量不需要训练就能算，成本近乎为零。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-pop-distributions-1k.png" alt="检索、窗口与随机曝光的流行度分布对比" width="1200" height="800">
   <figcaption>图 12 · 三个流行度分布对比。检索分布贴着窗口分布，而两者都明显比随机曝光更偏头部。</figcaption>
 </figure>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-rpd-bars-1k.png" alt="1K 赛道 RPD 诊断柱状图" width="1200" height="800">
-  <figcaption>图 13 · RPD 柱状（1K）。配额温和降温；稀有度加分在 1K 上过激，直接把分布拧断。</figcaption>
+  <img decoding="async" loading="lazy" src="assets/kuairand-rpd-bars-1k.png" alt="RPD 诊断柱状图" width="1200" height="800">
+  <figcaption>图 13 · RPD 柱状图。配额温和降温；稀有度加分过激，直接把分布拧断。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-head-share.png" alt="头部热门占比对比" width="1200" height="800">
@@ -355,7 +355,7 @@ $$</p>
 \mathcal{L}_{\mathrm{WLL\text{-}Norm}}=-\hat t\log p-\log(1-p),\qquad
 \hat t=\mathrm{TimeTrans.encode}(play\_time)
 $$</p>
-<p>还原秒数时再 \(\mathrm{TimeTrans.decode}(\cdot)\)。1K 上 MMoE+WLL-Norm 将 MAE 压到 <strong>5.41s</strong>。</p>
+<p>还原秒数时再 \(\mathrm{TimeTrans.decode}(\cdot)\)。MMoE+WLL-Norm 将 MAE 压到 <strong>5.41s</strong>。</p>
 
 <p><strong>② CREAD（偏生存 / 时长排序）</strong>  
 把时长轴切成 \(m\) 个阈值桶阈值 \(\{t_i\}_{i=1}^{m}\)（仅 train 拟合）。每个桶一个 sigmoid 头，标签为「是否活过该阈值」：</p>
@@ -372,7 +372,7 @@ $$</p>
 &=\mathcal{L}_{\mathrm{surv}}+\lambda_h\,\mathrm{Huber}(\hat y_{\mathrm{sec}},y_{\mathrm{sec}})+\lambda_m\sum_{i}[\hat p_{i+1}-\hat p_i]_+
 \end{aligned}
 $$</p>
-<p>Shared+CREAD 在 1K 上同时拿到全局 AUC <strong>0.7148</strong> 与时长 XAUC <strong>0.6242</strong>——综合首选。</p>
+<p>Shared+CREAD 同时拿到全局 AUC <strong>0.7148</strong> 与时长 XAUC <strong>0.6242</strong>——综合首选。</p>
 
 <p><strong>③ Distill-EMD（偏分布匹配）</strong>  
 \(m\) 维 softmax 输出离散分布 \(\hat{\mathbf{p}}\)；用 Laplace 核把真实时长做成软标签 \(\mathbf{q}\)，再对 CDF 做平方 EMD：</p>
@@ -397,7 +397,7 @@ $$</p>
 <p>其中 GAUC_w 是按用户平均的点击排序（个性化 CTR）；XAUC 是时长 pairwise 排序一致性；MAE 是秒数绝对误差。「利于 CTR 排序」= AUC/GAUC 高，<strong>≠</strong> 线上点击率最高。</p>
 
 <table>
-  <thead><tr><th>目标（test_rand）</th><th>1K 冠军</th><th>关键数字</th></tr></thead>
+  <thead><tr><th>目标（test_rand）</th><th>冠军配置</th><th>关键数字</th></tr></thead>
   <tbody>
     <tr><td>个性化 CTR（GAUC_w）</td><td><strong>MMoE + Distill-EMD</strong></td><td><strong>0.6045</strong></td></tr>
     <tr><td>全局 CTR（AUC）</td><td><strong>Shared + CREAD</strong></td><td><strong>0.7148</strong></td></tr>
@@ -406,23 +406,23 @@ $$</p>
   </tbody>
 </table>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pareto.png" alt="1K MTL 的 GAUC 与 XAUC Pareto 前沿" width="1200" height="800">
-  <figcaption>图 20 · 1K Pareto（GAUC_w ↑ × XAUC ↑）。前沿三点：Distill-EMD、WLL-Norm、CREAD。</figcaption>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pareto.png" alt="MTL 的 GAUC 与 XAUC Pareto 前沿" width="1200" height="800">
+  <figcaption>图 20 · Pareto 前沿（GAUC_w ↑ × XAUC ↑）。前沿三点：Distill-EMD、WLL-Norm、CREAD。</figcaption>
 </figure>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-heatmap.png" alt="1K MTL 指标热力图" width="1200" height="800">
-  <figcaption>图 21 · 1K MTL 指标热力图。没有一行在所有指标上都最红——无单一全能。</figcaption>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-heatmap.png" alt="MTL 指标热力图" width="1200" height="800">
+  <figcaption>图 21 · MTL 指标热力图。没有一行在所有指标上都最红——不同目标下最优配置不同。</figcaption>
 </figure>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-gauc.png" alt="1K MTL GAUC 对比" width="1200" height="800">
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-gauc.png" alt="MTL GAUC 对比" width="1200" height="800">
   <figcaption>图 22 · GAUC_w 对比。Distill-EMD / WLL-Norm（MMoE）略领先。</figcaption>
 </figure>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-xauc.png" alt="1K MTL XAUC 对比" width="1200" height="800">
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-xauc.png" alt="MTL XAUC 对比" width="1200" height="800">
   <figcaption>图 23 · XAUC 对比。CREAD 族明显强于 Distill 族。</figcaption>
 </figure>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-mae.png" alt="1K MTL MAE 对比" width="1200" height="800">
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-mae.png" alt="MTL MAE 对比" width="1200" height="800">
   <figcaption>图 24 · MAE 对比。WLL-Norm ≈5.4s，CREAD ≈12s，Distill 族 ≈22–23s。</figcaption>
 </figure>
 <figure>
@@ -441,19 +441,19 @@ $$</p>
   <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pred-distill.png" alt="MMoE+Distill-EMD 预测 vs 真实时长" width="1200" height="800">
   <figcaption>图 28 · MMoE+Distill-EMD：GAUC 冠军但时长点估计糊掉。</figcaption>
 </figure>
-<p><strong>方法层结论：</strong>工业时长目标怎么选，往往比再换一个 MTL 结构更关键。Pure 上 PLE+CREAD 赢，迁 1K 后 Shared/MMoE 更合适——结构冠军不可直接迁移。</p>
+<p><strong>方法层结论：</strong>工业时长目标怎么选，往往比再换一个 MTL 结构更关键。短序列上 PLE+CREAD 赢，迁到长历史后 Shared/MMoE 更合适——结构冠军不可直接迁移。</p>
 
-<h2 id="result">项目结果｜三条线各有锚点，负结果同样成立</h2>
-<p><strong>长序列侧：</strong>1K 双通道取得 rand <strong>0.721</strong> / gap <strong>−0.034</strong>（3 epoch），较 SIM +2.9%、较 DIN +4.8%；OneTrans-L 标出 std <strong>0.769</strong> 的能力上限。</p>
-<p><strong>去偏侧：</strong>通宵同协议下 <code>gate_q50</code> 取得最佳 |gap| <strong>−0.036</strong>，较强骨干上损失层 IPS（|gap| 0.041）约降 <strong>12%</strong>；并区分提分件与对齐件。</p>
-<p><strong>多任务侧：</strong>Shared+CREAD 综合最稳（AUC <strong>0.715</strong> / XAUC <strong>0.624</strong>）；MMoE+WLL-Norm 将 MAE 压到 <strong>5.4s</strong>；Distill-EMD 取得最高 GAUC_w <strong>0.605</strong> 但 MAE 约 23s——<strong>无单一全能冠军</strong>。</p>
+<h2 id="result">项目结果</h2>
+<p><strong>长序列侧：</strong>双通道取得 rand <strong>0.721</strong> / gap <strong>−0.034</strong>，较 SIM +2.9%、较 DIN +4.8%；OneTrans-L 标出 std <strong>0.769</strong> 的能力上限。</p>
+<p><strong>去偏侧：</strong>同协议下 PA-GSU + Bias-Gate 取得最佳 |gap| <strong>−0.036</strong>，较强骨干上损失层 IPS（|gap| 0.041）约降 <strong>12%</strong>。</p>
+<p><strong>多任务侧：</strong>Shared+CREAD 综合最稳（AUC <strong>0.715</strong> / XAUC <strong>0.624</strong>）；MMoE+WLL-Norm 将 MAE 压到 <strong>5.4s</strong>；Distill-EMD 取得最高 GAUC_w <strong>0.605</strong> 但 MAE 约 23s——不同目标下最优配置不同。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-std-rand-scatter.png" alt="test_std 与 test_rand 散点" width="1200" height="900">
   <figcaption>图 29 · std vs rand 总览。右上代表更强，靠近对角线代表更稳健；软检索与大模型集中在「右但偏下」。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-gap-ranking.png" alt="gap 排名条形图" width="1200" height="900">
-  <figcaption>图 30 · gap 排名。必须在同赛道、同 epoch 内解读，否则会得出错误结论。</figcaption>
+  <figcaption>图 30 · gap 排名。必须在同一数据集内解读，否则会得出错误结论。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-ablation-bars.png" alt="Debias-in-Retrieval 消融总览" width="1200" height="800">
@@ -476,24 +476,9 @@ $$</p>
   <figcaption>图 35 · 预测分数分布。用于核对模型是否把分数堆在头部热门区间。</figcaption>
 </figure>
 
-<h3>沉淀下来的负结果</h3>
-<ul>
-  <li>DIEN 弱于 DIN → 本数据跳过兴趣演化线。</li>
-  <li>Pure 上 IPS / SNIPS / RandCal 几乎拉不开；强双通道骨干上加 IPS 反而略伤。</li>
-  <li>旧 MTL（click + long_view）未改善无偏泛化；与新的 play_time MTL 勿混谈。</li>
-  <li>Soft 检索与 OneTrans 抬 std、伤 gap；scaling 不能替代去偏。</li>
-  <li>soft rare 在 1K 上 RPD 爆炸——把分布拧过头并不等于 gap 变好。</li>
-  <li><code>gate_meta</code> AUC 最强但 gap 不收。</li>
-  <li>Pure 上 PA-GSU 也弱：短序列、semantic 命中低，检索层可干预空间小。</li>
-  <li>Distill / Distill-EMD 抬 GAUC、伤 MAE——分布匹配 ≠ 秒数准。</li>
-  <li>PLE 在 Pure 上赢，迁 1K 后未继续赢——结构冠军不可直接迁移。</li>
-</ul>
-
-<p><strong>诚实边界：</strong>公开数据离线实验，无线上 A/B；Pure 与 1K 绝对值不横比；通宵 1-epoch 冠军 <code>gate_q50</code>（−0.036）<strong>未超过</strong> 3-epoch 双通道锚点（−0.034），只在同队列内成立；MTL <strong>无单一全能</strong>，「利于 CTR 排序」≠ 线上点击率最高；全因子交叉未跑完，属 future work。</p>
-
     </article>
   </main>
-  <footer><p>© 2026 侯奇瑞 · 项目报告依据《06 KuaiRand 长序列 / 去偏 / 多任务时长 · 简历版》整理</p></footer>
+  <footer><p>© 2026 侯奇瑞</p></footer>
   <script src="script.js"></script>
 </body>
 </html>
