@@ -348,6 +348,10 @@ $$</p>
 \mathcal{L}_{\mathrm{MTL}}=e^{-s_c}\mathcal{L}_c+s_c+e^{-s_w}\mathcal{L}_w+s_w
 $$</p>
 <p>CTR 侧仍用 BCE + label smoothing（\(\varepsilon\approx 0.003\)）。时长侧三种关键目标如下。</p>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-arch.png" alt="CTR + 观看时长 MTL 模型架构图" width="1200" height="800">
+  <figcaption>图 20 · MTL 架构总览。共享 DIN 兴趣提取后，经多专家门控分出 Click / Watch 两塔，时长侧并行三种目标（CREAD / WLL-Norm / Distill-EMD），总损失由 Kendall Uncertainty 自适应加权。</figcaption>
+</figure>
 
 <p><strong>① WLL-Norm（偏秒数点估计）</strong>  
 单 logit \(z\)；用 TimeTrans 把播放时长归一化到 \(\hat t\in[0,1]\)，令 \(p=\tfrac12\sigma(z)\)：</p>
@@ -407,27 +411,27 @@ $$</p>
 </table>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pareto.png" alt="MTL 的 GAUC 与 XAUC Pareto 前沿" width="1200" height="800">
-  <figcaption>图 20 · Pareto 前沿（GAUC_w ↑ × XAUC ↑）。前沿三点：Distill-EMD、WLL-Norm、CREAD。</figcaption>
+  <figcaption>图 21 · Pareto 前沿（GAUC_w ↑ × XAUC ↑）。前沿三点：Distill-EMD、WLL-Norm、CREAD。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-mtl-heatmap.png" alt="MTL 指标热力图" width="1200" height="800">
-  <figcaption>图 21 · MTL 指标热力图。没有一行在所有指标上都最红——不同目标下最优配置不同。</figcaption>
+  <figcaption>图 22 · MTL 指标热力图。没有一行在所有指标上都最红——不同目标下最优配置不同。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-mtl-gauc.png" alt="MTL GAUC 对比" width="1200" height="800">
-  <figcaption>图 22 · GAUC_w 对比。Distill-EMD / WLL-Norm（MMoE）略领先。</figcaption>
+  <figcaption>图 23 · GAUC_w 对比。Distill-EMD / WLL-Norm（MMoE）略领先。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-mtl-xauc.png" alt="MTL XAUC 对比" width="1200" height="800">
-  <figcaption>图 23 · XAUC 对比。CREAD 族明显强于 Distill 族。</figcaption>
+  <figcaption>图 24 · XAUC 对比。CREAD 族明显强于 Distill 族。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-mtl-mae.png" alt="MTL MAE 对比" width="1200" height="800">
-  <figcaption>图 24 · MAE 对比。WLL-Norm ≈5.4s，CREAD ≈12s，Distill 族 ≈22–23s。</figcaption>
+  <figcaption>图 25 · MAE 对比。WLL-Norm ≈5.4s，CREAD ≈12s，Distill 族 ≈22–23s。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-mtl-gauc-vs-xauc.png" alt="GAUC 与 XAUC 散点权衡" width="1200" height="800">
-  <figcaption>图 25 · GAUC vs XAUC。右上更均衡；左上是 Distill「CTR 强、时长弱」区。</figcaption>
+  <figcaption>图 26 · GAUC vs XAUC。右上更均衡；左上是 Distill「CTR 强、时长弱」区。</figcaption>
 </figure>
 <p><strong>方法层结论：</strong>工业时长目标怎么选，往往比再换一个 MTL 结构更关键。短序列上 PLE+CREAD 赢，迁到长历史后 Shared/MMoE 更合适——结构冠军不可直接迁移。</p>
 
@@ -437,11 +441,11 @@ $$</p>
 <p><strong>多任务侧：</strong>Shared+CREAD 综合最稳（AUC <strong>0.715</strong> / XAUC <strong>0.624</strong>）；MMoE+WLL-Norm 将 MAE 压到 <strong>5.4s</strong>；Distill-EMD 取得最高 GAUC_w <strong>0.605</strong> 但 MAE 约 23s——不同目标下最优配置不同。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-gap-ranking.png" alt="gap 排名条形图" width="1200" height="900">
-  <figcaption>图 26 · gap 排名。必须在同一数据集内解读，否则会得出错误结论。</figcaption>
+  <figcaption>图 27 · gap 排名。必须在同一数据集内解读，否则会得出错误结论。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-ablation-bars.png" alt="Debias-in-Retrieval 消融总览" width="1200" height="800">
-  <figcaption>图 27 · 消融总览。gate×配额偏向收窄 |gap|，soft / meta 偏向抬绝对 AUC。</figcaption>
+  <figcaption>图 28 · 消融总览。gate×配额偏向收窄 |gap|，soft / meta 偏向抬绝对 AUC。</figcaption>
 </figure>
 
     </article>
