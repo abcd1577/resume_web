@@ -44,6 +44,10 @@
         <p class="report-kicker">腾讯 KM · Agent 调优</p>
         <h1>基于 TextGrad 的 Agent 调优思路</h1>
         <p class="report-summary">从 Prompt/KB 手工试错的困境出发，梳理 TextGrad 的 Forward–Loss–Backward–Update 框架，以及中间态采集、双变量归因、人工闸门与 Skill 沉淀等工程化改进。</p>
+        <div class="award-banner">
+          <img decoding="async" loading="lazy" src="assets/km-agent-textgrad-award.png" alt="KM 好文获奖截图：入选 KM 头条、KM 推荐文章、热榜最高第 3 名" width="900" height="500">
+          <p class="award-caption">本文入选 <strong>KM 头条</strong> · <strong>KM 推荐文章</strong>，热榜最高 <strong>第 3 名</strong>。</p>
+        </div>
       </header>
 <blockquote class="article-quote">
 <p>大模型时代，Prompt 就是新型的代码：模型怎么答、什么格式、什么口吻，多半靠 Prompt 和知识库撑着。但怎么改、改哪里，往往只能靠经验试错——手工改 Prompt、翻 badcase、再跑一遍评测，A 题好了 B 题又坏了，很挠头。针对这类问题，我们参考 Stanford 团队在 Nature 上发表的 TextGrad 工作 [1]，用「文本梯度」给 Prompt/KB 的修改提供了一条有方向的路。</p>

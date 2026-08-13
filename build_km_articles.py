@@ -307,10 +307,9 @@ def _prepare_tabular_assets() -> None:
     target_dir = ROOT / "assets/km-tabular"
     target_dir.mkdir(parents=True, exist_ok=True)
     for name in TABULAR_IMAGE_NAMES:
-        source = ROOT / name
-        destination = target_dir / name
+        source = target_dir / name
         if source.exists():
-            shutil.copy2(source, destination)
+            shutil.copy2(source, source)  # already in place
 
 
 def _prepare_agent_assets() -> None:

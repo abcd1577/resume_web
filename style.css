@@ -817,6 +817,30 @@ img { max-width: 100%; display: block; }
 .research-card.paper  .rc-tag { background: var(--c-primary); color: #fff; }
 .research-card.patent .rc-tag { background: var(--c-blue);    color: #fff; }
 .research-card.blog   .rc-tag { background: var(--c-cream);   color: #6e6018; }
+.rc-award {
+  background: #e8a317;
+  color: #fff;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  margin-left: 0.3rem;
+  font-size: 0.68rem;
+}
+.award-banner {
+  margin: 1.2rem 0 0.4rem;
+  text-align: center;
+}
+.award-banner img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--c-mist);
+  box-shadow: var(--card-shadow);
+}
+.award-caption {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+}
 .rc-title {
   font-size: 1.05rem;
   color: var(--c-primary);
