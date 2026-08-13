@@ -300,10 +300,6 @@ $$</p>
   <img decoding="async" loading="lazy" src="assets/kuairand-rpd-by-histlen.png" alt="按历史长度切片的 RPD" width="1200" height="800">
   <figcaption>图 15 · RPD 按历史长度切片。长历史用户的检索漂移模式与短历史不同，呼应图 8 的长度切片结论。</figcaption>
 </figure>
-<figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-rpd-vs-gap.png" alt="RPD 与 gap 的关系" width="1200" height="800">
-  <figcaption>图 16 · RPD 与 gap 的关系。诊断量与最终无偏落差存在可解释的关联，这是命题成立的核心证据。</figcaption>
-</figure>
 
 <h4>方法：PA-GSU 与 Bias-Gate</h4>
 <p>三个互不冲突的干预层：<strong>配额改「选谁」，门控改「怎么融」，元特征改「CTR 头看见什么」</strong>。</p>
@@ -327,6 +323,10 @@ pop\_meta &= \big[\mathrm{Emb}(b_t)\,\|\,\mathrm{meta\_vec}_{17}\big] \\
 \end{aligned}
 $$</p>
 <p>gate bias 初始化到 ≈3 使 \(\sigma\approx 0.95\)，<strong>近恒等启动</strong>保证向后兼容。元特征含检索/语义命中比、检索与窗口的 log 流行度及其 drift、分数熵与 10 桶直方图。</p>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-bias-gate-arch.png" alt="Bias-Gated Fusion 模型架构图" width="1200" height="800">
+  <figcaption>图 16 · 模型架构总览。三路兴趣通道（Recent Top-K / Soft GSU / Hard GSU）经 Bias-Gated Fusion 门控融合后送入 CTR 预测头。</figcaption>
+</figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-quota-sweep.png" alt="配额 q 扫参" width="1200" height="800">
   <figcaption>图 17 · 配额 q 扫参。q 从 1.0 收到 0.3，gap 单调略好（约 0.2pp）——旋钮有效但不是银弹。</figcaption>
@@ -429,18 +429,6 @@ $$</p>
   <img decoding="async" loading="lazy" src="assets/kuairand-mtl-gauc-vs-xauc.png" alt="GAUC 与 XAUC 散点权衡" width="1200" height="800">
   <figcaption>图 25 · GAUC vs XAUC。右上更均衡；左上是 Distill「CTR 强、时长弱」区。</figcaption>
 </figure>
-<figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pred-cread.png" alt="Shared+CREAD 预测 vs 真实时长" width="1200" height="800">
-  <figcaption>图 26 · Shared+CREAD：综合首选配置的预测 vs 真实时长。</figcaption>
-</figure>
-<figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pred-wll.png" alt="MMoE+WLL-Norm 预测 vs 真实时长" width="1200" height="800">
-  <figcaption>图 27 · MMoE+WLL-Norm：秒数最准，点更贴对角线（MAE 5.4s）。</figcaption>
-</figure>
-<figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pred-distill.png" alt="MMoE+Distill-EMD 预测 vs 真实时长" width="1200" height="800">
-  <figcaption>图 28 · MMoE+Distill-EMD：GAUC 冠军但时长点估计糊掉。</figcaption>
-</figure>
 <p><strong>方法层结论：</strong>工业时长目标怎么选，往往比再换一个 MTL 结构更关键。短序列上 PLE+CREAD 赢，迁到长历史后 Shared/MMoE 更合适——结构冠军不可直接迁移。</p>
 
 <h2 id="result">项目结果</h2>
@@ -448,32 +436,12 @@ $$</p>
 <p><strong>去偏侧：</strong>同协议下 PA-GSU + Bias-Gate 取得最佳 |gap| <strong>−0.036</strong>，较强骨干上损失层 IPS（|gap| 0.041）约降 <strong>12%</strong>。</p>
 <p><strong>多任务侧：</strong>Shared+CREAD 综合最稳（AUC <strong>0.715</strong> / XAUC <strong>0.624</strong>）；MMoE+WLL-Norm 将 MAE 压到 <strong>5.4s</strong>；Distill-EMD 取得最高 GAUC_w <strong>0.605</strong> 但 MAE 约 23s——不同目标下最优配置不同。</p>
 <figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-std-rand-scatter.png" alt="test_std 与 test_rand 散点" width="1200" height="900">
-  <figcaption>图 29 · std vs rand 总览。右上代表更强，靠近对角线代表更稳健；软检索与大模型集中在「右但偏下」。</figcaption>
-</figure>
-<figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-gap-ranking.png" alt="gap 排名条形图" width="1200" height="900">
-  <figcaption>图 30 · gap 排名。必须在同一数据集内解读，否则会得出错误结论。</figcaption>
+  <figcaption>图 26 · gap 排名。必须在同一数据集内解读，否则会得出错误结论。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-ablation-bars.png" alt="Debias-in-Retrieval 消融总览" width="1200" height="800">
-  <figcaption>图 31 · 消融总览。gate×配额偏向收窄 |gap|，soft / meta 偏向抬绝对 AUC。</figcaption>
-</figure>
-<figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-gap-barh.png" alt="各实验 gap 横向对比" width="1200" height="900">
-  <figcaption>图 32 · gap 横向对比（简历精简版）。越接近 0 越稳健。</figcaption>
-</figure>
-<figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-calibration.png" alt="校准曲线" width="1200" height="800">
-  <figcaption>图 33 · 校准曲线。AUC 之外还看概率是否可用，排序好不等于校准好。</figcaption>
-</figure>
-<figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-roc-curves.png" alt="ROC 曲线" width="1200" height="800">
-  <figcaption>图 34 · ROC 曲线。标准曝光与随机曝光下的判别能力差异一目了然。</figcaption>
-</figure>
-<figure>
-  <img decoding="async" loading="lazy" src="assets/kuairand-score-distributions.png" alt="预测分数分布" width="1200" height="800">
-  <figcaption>图 35 · 预测分数分布。用于核对模型是否把分数堆在头部热门区间。</figcaption>
+  <figcaption>图 27 · 消融总览。gate×配额偏向收窄 |gap|，soft / meta 偏向抬绝对 AUC。</figcaption>
 </figure>
 
     </article>
