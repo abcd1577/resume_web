@@ -140,7 +140,7 @@
         <h3 style="margin-top:1.8rem">研究兴趣</h3>
         <p>聚焦<strong>机器学习、推荐广告与数据挖掘</strong>方向，关注以下几条主线：</p>
         <ul class="interest-list">
-          <li><strong>深度排序与长序列建模</strong>：检索 + 精建模、特征增强，以及曝光去偏（test_rand / gap）</li>
+          <li><strong>深度排序与长序列建模</strong>：检索 + 精排、特征增强、曝光去偏，以及 CTR+观看时长多任务</li>
           <li><strong>标签挖掘与画像</strong>：从行为和票据数据中提炼可解释、可入库的业务标签</li>
           <li><strong>Uplift / 因果决策</strong>：估计个体化干预收益，服务精细化运营和风险决策</li>
           <li><strong>Agent 系统优化</strong>：围绕 RAG、评测、归因和回归门禁建设可复现的调优闭环</li>
@@ -155,6 +155,8 @@
           <li>XGBoost / LightGBM</li>
           <li>Uplift / 因果推断</li>
           <li>DIN / SIM / 长序列建模</li>
+          <li>曝光去偏 / RPD</li>
+          <li>MTL / CREAD / MMoE</li>
           <li>推荐系统流程</li>
           <li>LLM Agent / RAG</li>
         </ul>
@@ -307,22 +309,22 @@
     </div>
   </section>
 
-  <!-- 项目经历：个人项目 KuaiRand（长序列 ∥ 去偏） -->
+  <!-- 项目经历：个人项目 KuaiRand（长序列 ∥ 去偏 ∥ 多任务） -->
   <section id="projects" class="section">
-    <p class="eyebrow">PROJECT · 长序列 / 去偏</p>
+    <p class="eyebrow">PROJECT · 长序列 / 去偏 / 多任务</p>
     <h2>项目经历</h2>
-    <p class="section-intro">腾讯实习内的五个项目见上方「实习经历」；这里单列个人项目——KuaiRand 上长序列建模与曝光去偏并重。长序列侧以双通道 SIM 为能力锚点；去偏侧用 RPD / PA-GSU / Bias-Gate 证明检索层去偏优于纯 IPS。</p>
+    <p class="section-intro">腾讯实习内的五个项目见上方「实习经历」；这里单列个人项目——KuaiRand 上长序列建模、曝光去偏与 CTR+观看时长 MTL 三线并重。</p>
     <div class="case-grid">
       <article class="case-card featured">
-        <p class="case-no">06 · 长序列 ∥ 去偏</p>
-        <h3>基于 KuaiRand 的长序列 CTR 建模与曝光去偏</h3>
-        <p class="case-summary">长序列侧走完 SASRec → DIN → DIEN（负结果）→ SIM 两阶段 → 双通道 recent⊕semantic → TWIN → OneTrans / RankMixer / HyFormer 共 12 级阶梯，并迁移 SIGKDD 风格特征与多损失；双通道达 rand 0.721 / gap −0.034（3 ep），OneTrans-L 标出 std 0.769 上限。去偏侧 Debias-in-Retrieval：RPD 诊断 + PA-GSU + Bias-Gate，通宵同协议 gate×配额最佳 |gap| −0.036。主看 test_rand 与 |gap|。</p>
-        <div class="metric-row"><div><strong>0.721</strong><span>test_rand</span></div><div><strong>−0.034</strong><span>gap · 3ep</span></div><div><strong>−0.036</strong><span>gate_q50 |gap|</span></div></div>
-        <div class="tags"><span>DIN→HyFormer</span><span>双通道 SIM</span><span>TWIN 一致性</span><span>SIGKDD 特征与损失</span><span>RPD</span><span>PA-GSU</span><span>Bias-Gate</span></div>
+        <p class="case-no">06 · 长序列 ∥ 去偏 ∥ 多任务</p>
+        <h3>基于 KuaiRand 的长序列 CTR、曝光去偏与多任务时长</h3>
+        <p class="case-summary">长序列：SIM 双通道 recent⊕semantic，随机曝光 AUC 0.721（较 SIM +2.9%、较 DIN +4.8%），OneTrans 标准 AUC 最高 0.769。去偏：RPD + PA-GSU + Bias-Gate，|gap| 0.036（较 IPS 约降 12%）。多任务：CREAD / WLL-Norm / Distill-EMD × Shared/MMoE/PLE；Shared+CREAD 达 AUC 0.715 / XAUC 0.624，WLL-Norm 将 MAE 压至 5.4s。</p>
+        <div class="metric-row"><div><strong>0.721</strong><span>test_rand</span></div><div><strong>0.624</strong><span>MTL XAUC</span></div><div><strong>5.4s</strong><span>MTL MAE</span></div></div>
+        <div class="tags"><span>双通道 SIM</span><span>RPD / PA-GSU</span><span>Bias-Gate</span><span>CREAD</span><span>WLL-Norm</span><span>MMoE / PLE</span></div>
         <a class="case-link" href="project-kuairand-ctr.html">查看完整项目报告 <span>→</span></a>
       </article>
     </div>
-    <p class="evidence-note"><strong>材料说明：</strong>公开数据离线实验；Pure 与 1K 不横比；通宵 1-ep 未超过 3-ep 锚点；不宣称线上 A/B 或官方全量 SOTA。</p>
+    <p class="evidence-note"><strong>材料说明：</strong>公开数据离线实验；Pure 与 1K 不横比；MTL 无单一全能；通宵 1-ep 未超过 3-ep 锚点；不宣称线上 A/B 或官方全量 SOTA。</p>
   </section>
 
   <!-- 论文 / 专利 / 技术好文 -->

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>基于 KuaiRand 的长序列 CTR 建模与曝光去偏 · 侯奇瑞</title>
-  <meta name="description" content="KuaiRand 上长序列建模（SASRec→DIN→SIM→TWIN→OneTrans/RankMixer/HyFormer、SIGKDD 特征与多损失）与 Debias-in-Retrieval（RPD / PA-GSU / Bias-Gate）并重的个人项目报告。" />
+  <title>基于 KuaiRand 的长序列 CTR、曝光去偏与多任务时长 · 侯奇瑞</title>
+  <meta name="description" content="KuaiRand 三主线：长序列建模（SIM 双通道 / OneTrans）、Debias-in-Retrieval（RPD / PA-GSU / Bias-Gate）、CTR+观看时长 MTL（CREAD / WLL-Norm / Distill-EMD × Shared/MMoE/PLE）。" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
   <script defer src="assets/vendor/katex/katex.min.js"></script>
@@ -35,24 +35,24 @@
     <article class="project-report">
     <header class="report-header">
       <p class="report-kicker">06 · 个人项目 / 独立完成</p>
-      <h1>基于 KuaiRand 的长序列 CTR 建模与曝光去偏</h1>
-      <p class="report-summary">长序列建模与曝光去偏同等重要。长序列侧从 SASRec / DIN 一路做到 SIM 双通道、TWIN 一致性检索与 OneTrans / RankMixer / HyFormer 统一架构，并迁移 SIGKDD 风格特征工程与多损失；去偏侧用 RPD / PA-GSU / Bias-Gate 证明检索层去偏优于纯 IPS。全程用 KuaiRand 真随机曝光统一报告 test_std / test_rand / gap。</p>
+      <h1>基于 KuaiRand 的长序列 CTR、曝光去偏与多任务时长</h1>
+      <p class="report-summary">三条线同等重要：长序列侧从 SASRec / DIN 做到 SIM 双通道与 OneTrans 等统一架构；去偏侧用 RPD / PA-GSU / Bias-Gate 证明检索层去偏优于纯 IPS；多任务侧系统对比工业时长目标 CREAD / WLL-Norm / Distill-EMD 与 Shared / MMoE / PLE。全程用 KuaiRand 真随机曝光统一报告 test_std / test_rand / gap，时长侧再加 GAUC / XAUC / MAE。</p>
       <dl class="report-metrics">
         <div>
           <dt>双通道 test_rand</dt>
           <dd>0.721</dd>
         </div>
         <div>
-          <dt>双通道 gap（3 ep）</dt>
-          <dd>−0.034</dd>
-        </div>
-        <div>
-          <dt>最高 test_std（OneTrans-L）</dt>
-          <dd>0.769</dd>
-        </div>
-        <div>
-          <dt>gate_q50 |gap|（1 ep）</dt>
+          <dt>gate_q50 |gap|</dt>
           <dd>−0.036</dd>
+        </div>
+        <div>
+          <dt>MTL XAUC（CREAD）</dt>
+          <dd>0.624</dd>
+        </div>
+        <div>
+          <dt>MTL MAE（WLL-Norm）</dt>
+          <dd>5.4s</dd>
         </div>
       </dl>
     </header>
@@ -74,10 +74,10 @@
   <figcaption>图 1 · Pure / 1K 双赛道分布。两条赛道的绝对量级不同，只能在赛道内比较，这是后续所有结论的前提。</figcaption>
 </figure>
 
-<h2 id="task">项目目标｜长序列利用率与无偏稳健性并重</h2>
-<p>目标不是单刷有偏 AUC，而是在同一裁判下同时回答两个问题：<strong>如何把超长历史真正用起来</strong>（序列编码器 → target-aware → 两阶段检索 → 统一架构 → 特征与损失工程），以及<strong>如何避免「更强的匹配带来更贴热门的偏置」</strong>（损失层去偏对照 → 检索层去偏）。两条线同等重要，且互相支撑：长序列负责能力上限，去偏负责这个上限在无偏流量上站得住。</p>
+<h2 id="task">项目目标｜长序列利用率、无偏稳健性与时长联合优化并重</h2>
+<p>目标不是单刷有偏 AUC，而是在同一裁判下同时回答三个问题：<strong>如何把超长历史真正用起来</strong>，<strong>如何避免「更强匹配更贴热门」</strong>，以及<strong>如何在点击之外把观看时长学准</strong>。三条线互相支撑：长序列负责能力上限，去偏负责无偏站得住，时长 MTL 负责优化目标不止「点不点」还有「看多久」。</p>
 
-<h2 id="action">技术路径｜长序列阶梯 + 特征损失工程 + Debias-in-Retrieval</h2>
+<h2 id="action">技术路径｜长序列阶梯 + Debias-in-Retrieval + CTR/时长 MTL</h2>
 
 <h3>一、长序列建模阶梯：从 SASRec 到 HyFormer</h3>
 <p>按「能力递进 + 每步都问 gap」的方式逐级搭建，共 12 类骨干。下表是完整阶梯与代表数字（1K 与 Pure 分别标注，勿横比）：</p>
@@ -269,54 +269,107 @@ $$</p>
   <figcaption>图 19 · 门控值 vs 目标流行度桶。门控确实按目标热度调节两路兴趣的贡献，说明它学到了可解释的行为。</figcaption>
 </figure>
 
-<h2 id="result">项目结果｜两条线各有锚点，负结果同样成立</h2>
-<p><strong>长序列侧：</strong>1K 双通道 <code>sim_1k_dual_multi</code> 取得 rand <strong>0.721</strong> / gap <strong>−0.034</strong>（3 epoch），是长序列能力与无偏稳健性的联合最优锚点；能力上限则由 OneTrans-L 的 std <strong>0.769</strong> 标出。SIGKDD 特征线抬 val 但 gap −0.054，说明<strong>用结构把长历史用好，比只堆特征更关键</strong>。</p>
-<p><strong>去偏侧：</strong>通宵同协议（1K @ 1 epoch）下 <code>gate_q50</code> 取得最佳 |gap| <strong>−0.036</strong>；<code>gate_meta</code> 的 rand 更高（0.719）但 gap 未收，<code>soft_rare05_cal</code> rand 最高（0.720）而 gap −0.042。<strong>提分件 ≠ 对齐件</strong>：要绝对 AUC 和要无偏对齐，该选的方法不是同一个。</p>
+<h3 id="mtl">三、多任务时长：CTR + 观看时长 MTL</h3>
+<p>工业推荐不止优化「点不点」，还要优化「看多久」。本线在 KuaiRand 上做双任务：CTR（<code>is_click</code>）+ 观看时长（<code>play_time_ms</code>）。结构扫 Shared / MMoE / PLE；时长损失扫 WLL / WLL-Norm / CREAD / Distill / Distill-EMD 等；任务权重用 Uncertainty Weighting；TimeTrans 分位桶仅在 train 拟合。注意：旧实验「click + long_view 双头」只作过 gap 对照且未改善无偏——与本线的工业 watch-time MTL <strong>不是同一条实验</strong>。</p>
+<table>
+  <thead><tr><th>目标（test_rand）</th><th>1K 冠军</th><th>关键数字</th></tr></thead>
+  <tbody>
+    <tr><td>个性化 CTR（GAUC_w）</td><td><strong>MMoE + Distill-EMD</strong></td><td><strong>0.6045</strong></td></tr>
+    <tr><td>全局 CTR（AUC）</td><td><strong>Shared + CREAD</strong></td><td><strong>0.7148</strong></td></tr>
+    <tr><td>时长排序（XAUC）</td><td><strong>Shared + CREAD</strong></td><td><strong>0.6242</strong></td></tr>
+    <tr><td>时长误差（MAE）</td><td><strong>MMoE + WLL-Norm</strong></td><td><strong>5.41 s</strong></td></tr>
+  </tbody>
+</table>
+<p>三种关键时长损失：<strong>WLL-Norm</strong> 偏秒数点估计；<strong>CREAD</strong>（\(m\) 个 sigmoid 生存桶）偏时长排序；<strong>Distill-EMD</strong>（软标签 + CDF EMD）偏分布匹配——利于 CTR 排序，秒数易糊。</p>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pareto.png" alt="1K MTL 的 GAUC 与 XAUC Pareto 前沿" width="1200" height="800">
+  <figcaption>图 20 · 1K Pareto（GAUC_w ↑ × XAUC ↑）。前沿三点：Distill-EMD、WLL-Norm、CREAD。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-heatmap.png" alt="1K MTL 指标热力图" width="1200" height="800">
+  <figcaption>图 21 · 1K MTL 指标热力图。没有一行在所有指标上都最红——无单一全能。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-gauc.png" alt="1K MTL GAUC 对比" width="1200" height="800">
+  <figcaption>图 22 · GAUC_w 对比。Distill-EMD / WLL-Norm（MMoE）略领先。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-xauc.png" alt="1K MTL XAUC 对比" width="1200" height="800">
+  <figcaption>图 23 · XAUC 对比。CREAD 族明显强于 Distill 族。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-mae.png" alt="1K MTL MAE 对比" width="1200" height="800">
+  <figcaption>图 24 · MAE 对比。WLL-Norm ≈5.4s，CREAD ≈12s，Distill 族 ≈22–23s。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-gauc-vs-xauc.png" alt="GAUC 与 XAUC 散点权衡" width="1200" height="800">
+  <figcaption>图 25 · GAUC vs XAUC。右上更均衡；左上是 Distill「CTR 强、时长弱」区。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pred-cread.png" alt="Shared+CREAD 预测 vs 真实时长" width="1200" height="800">
+  <figcaption>图 26 · Shared+CREAD：综合首选配置的预测 vs 真实时长。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pred-wll.png" alt="MMoE+WLL-Norm 预测 vs 真实时长" width="1200" height="800">
+  <figcaption>图 27 · MMoE+WLL-Norm：秒数最准，点更贴对角线（MAE 5.4s）。</figcaption>
+</figure>
+<figure>
+  <img decoding="async" loading="lazy" src="assets/kuairand-mtl-pred-distill.png" alt="MMoE+Distill-EMD 预测 vs 真实时长" width="1200" height="800">
+  <figcaption>图 28 · MMoE+Distill-EMD：GAUC 冠军但时长点估计糊掉。</figcaption>
+</figure>
+<p><strong>方法层结论：</strong>工业时长目标怎么选，往往比再换一个 MTL 结构更关键。Pure 上 PLE+CREAD 赢，迁 1K 后 Shared/MMoE 更合适——结构冠军不可直接迁移。</p>
+
+<h2 id="result">项目结果｜三条线各有锚点，负结果同样成立</h2>
+<p><strong>长序列侧：</strong>1K 双通道取得 rand <strong>0.721</strong> / gap <strong>−0.034</strong>（3 epoch），较 SIM +2.9%、较 DIN +4.8%；OneTrans-L 标出 std <strong>0.769</strong> 的能力上限。</p>
+<p><strong>去偏侧：</strong>通宵同协议下 <code>gate_q50</code> 取得最佳 |gap| <strong>−0.036</strong>，较强骨干上损失层 IPS（|gap| 0.041）约降 <strong>12%</strong>；并区分提分件与对齐件。</p>
+<p><strong>多任务侧：</strong>Shared+CREAD 综合最稳（AUC <strong>0.715</strong> / XAUC <strong>0.624</strong>）；MMoE+WLL-Norm 将 MAE 压到 <strong>5.4s</strong>；Distill-EMD 取得最高 GAUC_w <strong>0.605</strong> 但 MAE 约 23s——<strong>无单一全能冠军</strong>。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-std-rand-scatter.png" alt="test_std 与 test_rand 散点" width="1200" height="900">
-  <figcaption>图 20 · std vs rand 总览。右上代表更强，靠近对角线代表更稳健；软检索与大模型集中在「右但偏下」。</figcaption>
+  <figcaption>图 29 · std vs rand 总览。右上代表更强，靠近对角线代表更稳健；软检索与大模型集中在「右但偏下」。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-gap-ranking.png" alt="gap 排名条形图" width="1200" height="900">
-  <figcaption>图 21 · gap 排名。必须在同赛道、同 epoch 内解读，否则会得出错误结论。</figcaption>
+  <figcaption>图 30 · gap 排名。必须在同赛道、同 epoch 内解读，否则会得出错误结论。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-ablation-bars.png" alt="Debias-in-Retrieval 消融总览" width="1200" height="800">
-  <figcaption>图 22 · 消融总览。gate×配额偏向收窄 |gap|，soft / meta 偏向抬绝对 AUC。</figcaption>
+  <figcaption>图 31 · 消融总览。gate×配额偏向收窄 |gap|，soft / meta 偏向抬绝对 AUC。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-gap-barh.png" alt="各实验 gap 横向对比" width="1200" height="900">
-  <figcaption>图 23 · gap 横向对比（简历精简版）。越接近 0 越稳健。</figcaption>
+  <figcaption>图 32 · gap 横向对比（简历精简版）。越接近 0 越稳健。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-calibration.png" alt="校准曲线" width="1200" height="800">
-  <figcaption>图 24 · 校准曲线。AUC 之外还看概率是否可用，排序好不等于校准好。</figcaption>
+  <figcaption>图 33 · 校准曲线。AUC 之外还看概率是否可用，排序好不等于校准好。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-roc-curves.png" alt="ROC 曲线" width="1200" height="800">
-  <figcaption>图 25 · ROC 曲线。标准曝光与随机曝光下的判别能力差异一目了然。</figcaption>
+  <figcaption>图 34 · ROC 曲线。标准曝光与随机曝光下的判别能力差异一目了然。</figcaption>
 </figure>
 <figure>
   <img decoding="async" loading="lazy" src="assets/kuairand-score-distributions.png" alt="预测分数分布" width="1200" height="800">
-  <figcaption>图 26 · 预测分数分布。用于核对模型是否把分数堆在头部热门区间。</figcaption>
+  <figcaption>图 35 · 预测分数分布。用于核对模型是否把分数堆在头部热门区间。</figcaption>
 </figure>
 
 <h3>沉淀下来的负结果</h3>
 <ul>
   <li>DIEN 弱于 DIN → 本数据跳过兴趣演化线。</li>
   <li>Pure 上 IPS / SNIPS / RandCal 几乎拉不开；强双通道骨干上加 IPS 反而略伤。</li>
-  <li>MTL（click + long_view）未改善无偏泛化。</li>
+  <li>旧 MTL（click + long_view）未改善无偏泛化；与新的 play_time MTL 勿混谈。</li>
   <li>Soft 检索与 OneTrans 抬 std、伤 gap；scaling 不能替代去偏。</li>
   <li>soft rare 在 1K 上 RPD 爆炸——把分布拧过头并不等于 gap 变好。</li>
   <li><code>gate_meta</code> AUC 最强但 gap 不收。</li>
   <li>Pure 上 PA-GSU 也弱：短序列、semantic 命中低，检索层可干预空间小。</li>
+  <li>Distill / Distill-EMD 抬 GAUC、伤 MAE——分布匹配 ≠ 秒数准。</li>
+  <li>PLE 在 Pure 上赢，迁 1K 后未继续赢——结构冠军不可直接迁移。</li>
 </ul>
 
-<p><strong>诚实边界：</strong>公开数据离线实验，无线上 A/B；Pure 与 1K 绝对值不横比；通宵 1-epoch 冠军 <code>gate_q50</code>（−0.036）<strong>未超过</strong> 3-epoch 双通道锚点（−0.034），只在同队列内成立；<code>gate_q50_meta</code> 与 <code>soft+gate+meta</code> 等全因子交叉未跑完，属 future work，不计入已完成结论。</p>
+<p><strong>诚实边界：</strong>公开数据离线实验，无线上 A/B；Pure 与 1K 绝对值不横比；通宵 1-epoch 冠军 <code>gate_q50</code>（−0.036）<strong>未超过</strong> 3-epoch 双通道锚点（−0.034），只在同队列内成立；MTL <strong>无单一全能</strong>，「利于 CTR 排序」≠ 线上点击率最高；全因子交叉未跑完，属 future work。</p>
 
     </article>
   </main>
-  <footer><p>© 2026 侯奇瑞 · 项目报告依据《06 KuaiRand 长序列与去偏 · 简历版》整理</p></footer>
+  <footer><p>© 2026 侯奇瑞 · 项目报告依据《06 KuaiRand 长序列 / 去偏 / 多任务时长 · 简历版》整理</p></footer>
   <script src="script.js"></script>
 </body>
 </html>
