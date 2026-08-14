@@ -965,6 +965,56 @@ img { max-width: 100%; display: block; }
 .title { flex: 1; font-weight: 500; }
 
 /* ============================================================
+   校园经历
+   ============================================================ */
+.campus-card {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
+  gap: 1.6rem;
+  align-items: center;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.4rem 1.5rem 1.5rem;
+}
+.campus-copy h3 {
+  color: var(--c-primary);
+  font-size: 1.15rem;
+  margin: 0 0 0.7rem;
+  line-height: 1.5;
+}
+[data-theme="dark"] .campus-copy h3 { color: var(--c-sky); }
+.campus-copy p {
+  color: var(--text-soft);
+  margin: 0;
+  line-height: 1.75;
+  font-size: 0.95rem;
+}
+.campus-photo {
+  margin: 0;
+}
+.campus-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+.campus-photo figcaption {
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+@media (max-width: 720px) {
+  .campus-card {
+    grid-template-columns: 1fr;
+    padding: 1.1rem;
+  }
+}
+
+/* ============================================================
    联系
    ============================================================ */
 .contact-list {
