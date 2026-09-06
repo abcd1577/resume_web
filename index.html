@@ -216,15 +216,15 @@
           <a class="project-card-link" href="project-invoice-taxonomy.html">
             <span class="proj-index">01</span>
             <div class="card-body">
-              <h3>基于双 LLM Agent 的开放式用户标签挖掘与 Taxonomy 归纳</h3>
+              <h3>基于 AgentFlow 的用户标签挖掘：发票试点到商业支付规模化</h3>
               <p class="proj-role">主要负责人</p>
-              <p><strong>项目背景：</strong>针对发票数据信息密度高，探索以大模型 token 换人力，快速挖掘可解释标签并沉淀为可复用的用户标签体系。</p>
-              <p><strong>Agent 设计：</strong>搭建双 LLM 链路，并以搜一搜补齐陌生公司知识；评测集涌现约 2338 种标签；针对约 171 万开通有发票用户，通过优化搜一搜、prefix_cache 等方法将全量打标由约 10 天压至 4–5 天。</p>
-              <p><strong>标签体系归纳：</strong>建立「词频统计 → L1-L3 taxonomy → 用户标签长表」的可迭代归纳链路；进一步以数据驱动筛选 HVLR 人群，核心人群 7+ Lift 约 0.14。</p>
-              <p><strong>SFT 微调：</strong>用 Qwen3.5-27B 对 20 万样本离线推理，归并与分层过采样得到 5 万监督数据，LoRA 对 9B 做结构化 SFT；loss 约 0.13，标签准确性差距 3.8%。</p>
+              <p><strong>项目背景：</strong>针对发票数据信息密度高，探索以大模型 token 换人力，把有车、消费偏好等高价值信号沉淀为可入库标签；开放涌现天然长尾，不能直接圈人。</p>
+              <p><strong>发票试点：</strong>双 LLM + 搜一搜补齐陌生实体，流水指针强制回挂防幻觉；覆盖开通有发票约 200 万用户，200 万+ 涌现标签经 9/64/141 三级体系收敛，置信度 ≥0.7 覆盖率 99.57%，已部署并补齐一年历史数据。</p>
+              <p><strong>评测与提效：</strong>金标 Accuracy 0.592（+10.2pp）、Precision +18.7pp，争议样本裁判支持率 99.18%；Prefix-Cache + 搜一搜截断 + Qwen-27B 将 170 万推理从 10 天压至 4.64 天（提效 53.6%）；5 万精筛样本 LoRA 微调 9B，证据回挂率 78.9%，师生差距 3.8%，相同资源提效超 4 倍至约 1.4 天。</p>
+              <p><strong>支付规模化：</strong>将范式迁移到商业支付，GPU 打种子 + CPU 分层泛化；51 个核心标签全量上线，去重覆盖 10.85 亿支付用户；「有车一族」CPU 树模型 F1 0.873，相对 GPU 约提效 1 万倍。</p>
               <div class="tags">
-                <span>双 LLM Agent</span><span>L1-L3 Taxonomy</span><span>HVLR 人群识别</span>
-                <span>LoRA SFT</span><span>业务圈选</span>
+                <span>双 LLM Agent</span><span>L1-L3 Taxonomy</span><span>Prefix-Cache</span>
+                <span>LoRA SFT</span><span>CPU 分层泛化</span>
               </div>
               <div class="links"><span class="go-report">查看完整项目报告 →</span></div>
             </div>

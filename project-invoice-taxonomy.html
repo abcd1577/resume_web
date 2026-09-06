@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>发票用户标签体系构建与业务应用 · 侯奇瑞</title>
-  <meta name="description" content="从开放式标签挖掘到可入库、可圈选、可治理的完整发票标签体系。" />
+  <title>基于 AgentFlow 的用户标签挖掘 · 侯奇瑞</title>
+  <meta name="description" content="发票试点跑通开放挖掘与三级体系，再迁移到商业支付做 GPU 打种子与 CPU 分层泛化。" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="assets/vendor/katex/katex.min.css" />
   <script defer src="assets/vendor/katex/katex.min.js"></script>
@@ -35,48 +35,48 @@
     <article class="project-report">
     <header class="report-header">
       <p class="report-kicker">01 · 主要负责人 · 2026.01–2026.09</p>
-      <h1>基于双 LLM Agent 的开放式用户标签挖掘与 Taxonomy 归纳</h1>
-      <p class="report-summary">针对发票数据信息密度高，搭建双 LLM Agent 快速挖掘可解释标签，再归纳为 L1-L3 taxonomy；并对 9B 做结构化 SFT，降低全量推理成本。</p>
-      
+      <h1>基于 AgentFlow 的用户标签挖掘：发票试点到商业支付规模化</h1>
+      <p class="report-summary">针对发票数据信息密度高，用双 LLM Agent 做开放挖掘与三级体系归纳；工程提效与 9B-LoRA 压成本后，把同一套范式迁移到商业支付，完成 GPU 打种子与 CPU 分层泛化。</p>
+
       <dl class="report-metrics">
-        
+
         <div>
-          <dt>自由标签输入</dt>
-          <dd>2,338 种</dd>
+          <dt>开通有发票覆盖</dt>
+          <dd>~200 万</dd>
         </div>
-        
+
         <div>
-          <dt>全量打标周期</dt>
-          <dd>约 10 天 → 4–5 天</dd>
+          <dt>170 万推理周期</dt>
+          <dd>10 天 → 4.64 天</dd>
         </div>
-        
+
         <div>
-          <dt>HVLR 7+ Lift</dt>
-          <dd>约 0.14</dd>
+          <dt>支付标签去重覆盖</dt>
+          <dd>10.85 亿</dd>
         </div>
-        
+
       </dl>
-      
+
     </header>
-<h2 id="situation">项目背景｜发票数据未充分使用，长尾标签也需要体系化</h2>
-<p>这个项目的背景有两层。第一层是发票数据信息密度高，但长期很难转化为稳定用户画像。发票里的 buyer、seller、item、金额和活跃度能反映职业、消费场景、经营行为和风险线索，但如果只停留在原始字段或少量固定 Schema，就很难进入后续圈选和策略使用。</p>
-<p>第二层是大模型生成的标签足够丰富，却天然长尾。发票试点近一个月覆盖约 <strong>171 万</strong>开通用户，近一年约 <strong>541 万</strong>。AgentFlow 生成了 <strong>2,338 种</strong>自由标签，但约 <strong>76%</strong> 只在单个用户上出现。生成能力解决了“能否快速挖出标签”，但没有自动解决“标签能否稳定入库、圈选和治理”。</p>
-<p>因此这个项目不是单纯做一次打标，而是探索以大模型 token 换人力：1–2 人快速从发票中挖掘可解释标签，并进一步归纳为可持续消费的发票标签体系，打通“数据挖掘 → 标签资产 → 业务 / 产品使用”。</p>
+<h2 id="situation">项目背景｜发票数据信息密度高，涌现标签却不能直接入库</h2>
+<p>发票里的买方、卖方、商品、金额和活跃度能反映职业、消费偏好、出行和资产线索，但长期停留在原始字段或少量固定 Schema，很难进入圈选和策略。探索方向是以大模型 token 换人力：让 1–2 人快速挖出可解释标签，再收成可复用的用户标签体系。</p>
+<p>难点不在“能不能生成词”，而在生成结果能不能用。开放挖掘会涌出 200 万+ 标签，去重后仍约 98 万种，长尾、同义、粒度不一，不能直接入库圈人。同时，中小微商户和主体简称缺少世界知识，无约束生成容易幻觉；全量打标若一直跑 27B，成本和时延也无法按月交付。</p>
+<p>因此项目分成两段：先在发票上跑通「开放挖掘 + 稳定归纳 + 可评测 + 可降本」，再把同一套范式迁到信息密度更高、规模更大的商业支付。</p>
 
-<h2 id="task">项目目标｜构建能打标、能解释、能共建的完整发票标签体系</h2>
-<p>项目目标分两步。第一步是让系统能稳定打标：从发票中抽取结构化字段、涌现标签和自然语言 Summary，并给出可回溯的 evidence。第二步是把这些结果收敛成一套完整的发票标签体系，让标签能直接用于入库、圈选、评估和产品共建。</p>
-<p>这套体系需要同时满足三个要求：标签要能解释，产品可以对着原始发票证据讨论对错；标签要能共建，产品评审和规则修正可以持续回流；标签要能直接使用，不能停留在一次性的自由文本输出。</p>
+<h2 id="task">项目目标｜正确性、稳定性、可行性同时成立</h2>
+<p>发票试点要同时打中三件事。正确性：把大模型约束在抽取式证据上，避免幻觉硬判。稳定性：把长尾造词收成 9 / 64 / 141 的 MECE 三级体系，让标签可入库、可圈选、可独立迭代。可行性：在不砍检索、不伤 F1 的前提下，把约 170 万样本的推理从按月交不出，压到按月可交付。</p>
+<p>支付阶段的目标不是再做一个发票 Agent，而是把 GPU 上的高质量种子 $Y$ 和原文 Evidence，接到 CPU 上的规则、树模型和可迭代小模型，支撑十亿级覆盖。</p>
 
-<h2 id="action">技术路径｜先开放挖掘，再稳定归纳，最后产品回流</h2>
-<p><strong>第一步：设计标签供给链路。</strong> 上游 AgentFlow 遵循“代码做确定性规则，LLM 做语义判断”。代码负责清洗、派生、白名单、Schema 校验和置信度重打分；LLM-A 决定搜索哪些陌生实体，LLM-B 负责最终打标与 Summary。每条标签统一输出 <code>value</code>、<code>confidence</code> 和引用真实 buyer / seller / item 的 <code>evidence</code>。</p>
+<h2 id="action">技术路径｜先发票试点，再支付规模化</h2>
+<p><strong>第一步：发票挖掘链路。</strong> AgentFlow 按「代码做确定性规则，LLM 做语义判断」拆成四步：数据准备（月度流水聚合、国民品牌白名单、陌生实体候选池）→ 知识补全（LLM-A 精筛 Top 6、搜一搜 Tool-use、工商主营结构化注入）→ 多维挖掘（LLM-B 开放涌现、流水指针强制回挂、自然语言 Summary）→ 格式校验（JSON 强校验、字面证据一致性、高置信度输出）。每条标签统一给出 <code>value</code>、<code>confidence</code> 和引用真实买方 / 卖方 / 商品的 <code>evidence</code>。</p>
 <figure>
   <img decoding="async" src="assets/invoice-agentflow-technical-design.webp" alt="发票标签挖掘 AgentFlow 中代码节点、双大模型、外部搜索与结果校验的技术设计" width="1400" height="787" fetchpriority="high" loading="eager">
   <figcaption>图 1 · AgentFlow 技术设计。双 LLM 将“搜什么”和“打什么标签”解耦，代码节点承担可明确编码的规则。</figcaption>
 </figure>
-<p><strong>第二步：构建完整的发票标签体系。</strong> 固定字段、涌现短语与 Summary 进入同义清洗和敏感过滤；长尾短语归入稳定主题；主题组合为人群口径；最终沉淀为用户标签长表 / 宽表，支持入库、圈选、评估和治理，并通过产品评审持续回流。</p>
+<p><strong>第二步：三级体系归纳。</strong> 自顶向下用 MECE 树规范 9 个一级、64 个二级、141 个三级标签，统一编码为 <code>tag_code</code>；自底向上做同义归并、粒度对齐，并用 Lift 驱动组合与负向排除。置信度 ≥ 0.7 的高质量标签覆盖率 99.57%。固定字段保证跨用户可比，开放标签保留丰富度，映射规则把两者收敛成用户标签长表。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/invoice-taxonomy-delivery-pipeline.webp" alt="从大模型发票抽取信号到稳定业务标签体系的构建和交付流程" width="1400" height="790">
-  <figcaption>图 2 · 标签归纳体系与交付流程。固定字段保证跨用户可比，开放标签保留丰富度，映射规则和三级体系将其收敛为可消费标签。</figcaption>
+  <figcaption>图 2 · 标签归纳体系与交付流程。98 万+ 去重涌现标签沉淀为 141 个标准 L3，体系可独立于 Agent 迭代。</figcaption>
 </figure>
 <figure class="tag-system-figure">
   <table class="tag-system-table">
@@ -135,28 +135,194 @@
       </tr>
     </tbody>
   </table>
-  <figcaption>图 3 · 完整发票标签体系（层级示例）。开放标签经过归纳后沉淀为 L1-L3 taxonomy；此处仅展示体系层级与代表性标签，内部覆盖人数、覆盖率、置信度与风险指标等明细已省略。</figcaption>
+  <figcaption>图 3 · 发票标签体系层级示例（9 / 64 / 141）。此处只展示代表性标签，内部覆盖人数等明细已省略。</figcaption>
 </figure>
-<p><strong>第三步：用评测和裁判复核验证方案。</strong> 固定 Schema 约有 20 个枚举字段，单用户通常输出 3–7 个标签且包含较多 unknown；涌现方案输出 2,338 种自由短语，单用户得到 5–10 个有效标签，并能细化到具体职业、会员和生活方式。</p>
+<p><strong>第三步：无先验真值下的评测。</strong> 开放标签没有现成 Ground Truth。评测上用独立模型标注 500 条金标，覆盖 26 维画像和涌现标签，并引入有效涌现密度 EDD；同时把已有互联网员工库当作业务真值做二分类。与员工库判定不一致的 364 条争议样本，再交给第三方裁判 Agent 双盲仲裁，避免只凭自评置信度做硬判。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/invoice-evaluation-workflow.webp" alt="发票标签方案从调研、设计、抽样、评测到裁判复核的实验流程" width="1400" height="790">
   <figcaption>图 4 · 方案评估与裁判复核流程。差异样本经过二次判断，避免只凭少量案例选择方案。</figcaption>
 </figure>
-<p><strong>第四步：工程提效、SFT 与二次 Agent。</strong> 发票全量生产如果直接按原链路跑，成本和耗时都不可接受。我主要从优化搜一搜、prefix_cache、模型选型与并行度几方面压缩成本：针对约 <strong>171 万</strong>开通有发票用户，将全量打标由约 <strong>10 天</strong>压至 <strong>4–5 天</strong>。针对全量推理成本高，进一步用 Qwen3.5-27B 对 20 万样本离线推理，经近义归并与分层过采样得到 5 万监督数据，并以 LoRA 对 9B 做结构化 SFT；loss 约 0.13，标签准确性差距约 3.8%。二次 Agent 则使用阶段一证据将开放语义收敛为严格二分类，只对争议样本调用裁判 Agent。</p>
+<table>
+  <thead>
+    <tr>
+      <th>方案</th>
+      <th>Accuracy</th>
+      <th>Precision</th>
+      <th>去除 Unknown</th>
+      <th>裁判支持率</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>V4 基线</td>
+      <td>0.4903</td>
+      <td>0.4876</td>
+      <td>0.4903</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>AgentFlow</td>
+      <td>0.5920</td>
+      <td>0.6748</td>
+      <td>0.6120</td>
+      <td>99.18%</td>
+    </tr>
+    <tr>
+      <td>相对增益</td>
+      <td>+10.2pp</td>
+      <td>+18.7pp</td>
+      <td>+12.15pp</td>
+      <td>361 / 364</td>
+    </tr>
+  </tbody>
+</table>
+<p><strong>第四步：知识补全与工程提效。</strong> 搜一搜动态补全率 94.5%，用来压「京东达新」这类简称幻觉；消融表明粗暴取消搜索虽更快，但 F1 会掉到 0.4816。真正能按月交付的组合是：Prefix-Cache 复用 KV Cache（提效 20.77%）、搜一搜结构化截断只留主营与前 300 字（提效 35.80%，F1 不损）、再切到 Qwen-27B 平衡质量与耗时。170 万样本推理从 10 天压到 4.64 天，综合提效 53.6%。</p>
+<table>
+  <thead>
+    <tr>
+      <th>方案</th>
+      <th>1000 条耗时</th>
+      <th>提效</th>
+      <th>170 万耗时</th>
+      <th>F1</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Baseline</td>
+      <td>0.44h</td>
+      <td>—</td>
+      <td>10 天</td>
+      <td>0.4891</td>
+    </tr>
+    <tr>
+      <td>+ Prefix-Cache</td>
+      <td>0.35h</td>
+      <td>20.77%</td>
+      <td>7.92 天</td>
+      <td>0.4904</td>
+    </tr>
+    <tr>
+      <td>+ 取消搜一搜</td>
+      <td>0.25h</td>
+      <td>42.49%</td>
+      <td>5.75 天</td>
+      <td>0.4816</td>
+    </tr>
+    <tr>
+      <td>+ 搜一搜截断</td>
+      <td>0.28h</td>
+      <td>35.80%</td>
+      <td>6.42 天</td>
+      <td>0.4910</td>
+    </tr>
+    <tr>
+      <td>+ Qwen-27B</td>
+      <td>0.20h</td>
+      <td>53.60%</td>
+      <td>4.64 天</td>
+      <td>0.4915</td>
+    </tr>
+  </tbody>
+</table>
 <figure>
   <img decoding="async" loading="lazy" src="assets/invoice-parallelism-benchmark.webp" alt="发票标签批处理并行度从 8 到 512 与端到端耗时的基准测试" width="1400" height="751">
   <figcaption>图 5 · 并行度与运行耗时。256 附近是本次环境的最优点，继续增加并发反而变慢。</figcaption>
 </figure>
+<p><strong>第五步：27B → 9B 的 LoRA SFT。</strong> 直接换小基座会联想变弱、格式遵从变差。做法是用 27B 离线产 20 万教师样本，规则清洗后再分层过采样、近义归并得到 5 万优质数据；推理链固定为 Evidence → Label，再用 LoRA 对 9B 做结构化 SFT，loss 约 0.13。5 万精筛把师生差距从 14.6% 收到 3.8%，标签种类覆盖教师 97.2%；证据直接挂回发票条目的比例 78.9%，高于 27B 教师的 76.0%。相同资源下 170 万耗时从 10 天降到约 1.4 天。</p>
+<table>
+  <thead>
+    <tr>
+      <th>方案</th>
+      <th>EDD</th>
+      <th>证据回挂率</th>
+      <th>标签种类覆盖</th>
+      <th>师生差距</th>
+      <th>170 万耗时</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>9B Zero-shot</td>
+      <td>2.15</td>
+      <td>41.2%</td>
+      <td>38.5%</td>
+      <td>72.1%</td>
+      <td>1.4 天</td>
+    </tr>
+    <tr>
+      <td>20 万粗筛</td>
+      <td>4.73</td>
+      <td>62.5%</td>
+      <td>81.0%</td>
+      <td>14.6%</td>
+      <td>1.4 天</td>
+    </tr>
+    <tr>
+      <td>5 万精筛 LoRA</td>
+      <td>5.64</td>
+      <td>78.9%</td>
+      <td>97.2%</td>
+      <td>3.8%</td>
+      <td>1.4 天</td>
+    </tr>
+    <tr>
+      <td>27B 教师</td>
+      <td>5.58</td>
+      <td>76.0%</td>
+      <td>100%</td>
+      <td>基准</td>
+      <td>10 天</td>
+    </tr>
+  </tbody>
+</table>
+<p><strong>第六步：商业支付的 GPU 打种子 + CPU 分层泛化。</strong> 发票只是试点。支付侧先把当月明细、近 12 月行为分层和资金 / 商户聚合摘要做成结构化上下文；GPU 上用级联双 Agent 打种子：LLM1 按人生阶段、居住通勤、消费心智等 11 维写无格式限制的语义报告，LLM2 只读报告做双轨映射（A 轨闭集对齐标准词，B 轨开集造词）并强制抄录流水指针作为 Evidence。CPU 侧已落地的是规则提纯 / Lookup 和树模型降维；针对高频标签的轻量 BERT 与 4B / 0.8B 蒸馏仍是后续探索，不计入已完成结果。</p>
+<p>规则侧用多源交叉加负向排误，例如校园食堂 × 餐卡充值 × 单笔 13–22 元，或仓储会员店命中山姆 / 开市客并排除「同款 / 平替 / 代购」。树模型把种子标签当 $Y$、支付基础特征当 $X$，把语义推理降成表格分类，在 CPU 上批量推理。</p>
+<table>
+  <thead>
+    <tr>
+      <th>「有车一族」方案</th>
+      <th>查准率</th>
+      <th>召回率</th>
+      <th>F1</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>规则 R1（宽松）</td>
+      <td>0.792</td>
+      <td>0.941</td>
+      <td>0.860</td>
+    </tr>
+    <tr>
+      <td>规则 R3（严格）</td>
+      <td>0.924</td>
+      <td>0.629</td>
+      <td>0.748</td>
+    </tr>
+    <tr>
+      <td>树模型阈值 0.45</td>
+      <td>0.882</td>
+      <td>0.864</td>
+      <td>0.873</td>
+    </tr>
+    <tr>
+      <td>树模型阈值 0.9</td>
+      <td>0.958</td>
+      <td>0.593</td>
+      <td>0.732</td>
+    </tr>
+  </tbody>
+</table>
 
-<h2 id="result">项目结果｜形成标签资产闭环，并支撑业务评估与治理</h2>
-<p>以大厂员工金标为例，Agent Accuracy 为 <strong>0.592</strong>，V4 为 0.490；Agent Precision 为 <strong>0.675</strong>，V4 为 0.488。去除 unknown 后 Accuracy 提升 <strong>12.15 个百分点</strong>；裁判 Agent 在分歧样本中支持新方案的比例为 <strong>99.18%</strong>。</p>
-<p>工程侧综合优化后，约 171 万用户全量打标由约 <strong>10 天</strong>压至 <strong>4–5 天</strong>；结构化 SFT 后标签准确性差距约 <strong>3.8%</strong>。三级体系进一步在九个一级主题上检查覆盖，并对可评估标签统计金额违约 Lift；HVLR 核心人群 7+ Lift 约 <strong>0.14</strong>。</p>
+<h2 id="result">项目结果｜发票按月交付，支付完成十亿级泛化</h2>
+<p>发票试点已覆盖开通且有发票用户约 <strong>200 万</strong>，全量补齐 202508–202607 一年历史数据并部署运行。金标 Accuracy <strong>0.592</strong>（较 V4 +10.2pp），Precision <strong>0.6748</strong>（+18.7pp）；去除当月无线索样本后 Accuracy 再升 <strong>12.15pp</strong>。364 条争议样本中，裁判支持新方案 <strong>99.18%</strong>（361 / 364）。三级体系收成 141 个标准 L3，其中高风险区分度标签 40+ 个，置信度 ≥ 0.7 覆盖率 99.57%。</p>
+<p>工程上，170 万推理从约 <strong>10 天</strong>压至 <strong>4.64 天</strong>（提效 53.6%）。9B-LoRA 在相同资源下提效超过 4 倍，170 万约 <strong>1.4 天</strong>，证据回挂率 78.9%，标签种类覆盖教师 97.2%，师生差距 3.8%。</p>
 <figure>
   <img decoding="async" loading="lazy" src="assets/invoice-taxonomy-evaluation.webp" alt="发票三级标签体系的一级主题覆盖和金额违约 Lift 分布" width="1400" height="574">
   <figcaption>图 6 · 标签体系覆盖广度与风险区分度。图中只包含汇总数据，不含用户级明细。</figcaption>
 </figure>
-<p>更具体地看，标签体系不是只留下一个 HVLR 结论，而是把不同来源的发票信号整理成可讨论的标签积木。例如，“商旅达人 / 差旅达人 / 高频商务出行”统一到“商务差旅”；“山姆会员”沉淀为会员与消费偏好标签；“燃油车主 / 新能源车主”归到车辆与出行标签；“腾讯员工 / 大厂互联网员工 / 互联网从业者”则进入职业身份层级，并在需要严格口径时交给二次 Agent 做 0/1 复核。</p>
-<p>这些标签进入业务使用时，不直接按单个短语圈人，而是先沉淀为 <code>tag_code</code>、一级主题、二级主题和可读标签名。对外展示时我只保留 Lift 口径，避免暴露内部人群规模和表字段。下面是标签体系中可评估标签的样例：</p>
+<p>标签进入业务使用时，不按单个涌现词圈人，而是先沉淀为 <code>tag_code</code>、一级主题、二级主题和可读标签名。例如“商旅达人 / 差旅达人 / 高频商务出行”统一到“商务差旅”；“燃油车主 / 新能源车主”归到车辆与出行。对外展示只保留 Lift 口径。下面是可评估标签样例：</p>
 <table>
   <thead>
     <tr>
@@ -211,12 +377,12 @@
     </tr>
   </tbody>
 </table>
-<p>这类表格说明：标签体系的价值不在“某个涌现词听起来像高净值”，而在于每个标签都有稳定编码、主题层级和可验证的 Lift 指标。另一个更严格的核心口径中，命中 2+ 正向主题并排除负向主题的 7+ Lift 约 <strong>0.14</strong>，也验证了数据驱动归纳优于直接做语义相似匹配。</p>
-<p>最终交付不是一批一次性标签，而是可入库、可圈选、可评估、可审计的标签资产。AgentFlow 保留语义丰富度，归纳体系提供稳定口径，两者可以分别迭代。</p>
+<p>支付阶段已完成 51 个核心种子标签，沉淀到月分区纵表，去重覆盖 <strong>10.85 亿</strong>支付用户，累计打标 33.9 亿人次（人均 3.1 个标签）。以「有车一族」为例：GPU 9B-LoRA 最接近 27B，用于高精探索；CPU 树模型 F1 达 <strong>0.873</strong>，相对 GPU 约提效 1 万倍，作为全量主力；CPU 纯规则相对 GPU 约提效 10 万倍，单分区回补约 1–2 小时。BERT / 极小模型蒸馏仍属规划，未当作已上线结果。</p>
+<p>最终交付不是一批一次性短语，而是可入库、可圈选、可评估的标签资产：发票侧保留语义丰富度并按月交付，支付侧用 CPU 把种子标签铺到十亿级用户。</p>
 
     </article>
   </main>
-  <footer><p>© 2026 侯奇瑞 · 项目报告依据项目文件夹内《01-完整版》整理</p></footer>
+  <footer><p>© 2026 侯奇瑞 · 项目报告按转正答辩 PPT（2026.09.05）口径整理</p></footer>
   <script src="script.js"></script>
 </body>
 </html>
